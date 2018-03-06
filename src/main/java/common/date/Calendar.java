@@ -19,7 +19,7 @@ public class Calendar implements Iterable<LocalDate> {
 
         this.startDate = startDate;
         this.stopDate = stopDate;
-        sortByStartingDate(removeDuplicates(days));
+        sortDays(removeDuplicates(days));
     }
 
     @Override
@@ -43,11 +43,6 @@ public class Calendar implements Iterable<LocalDate> {
 
         @Override
         public LocalDate next() {
-            if (isStartDayTheMeetingDay()) {
-                LocalDate firstMeeting = nextDate;
-                nextDate = nextDate.plus(1, ChronoUnit.DAYS);
-                return firstMeeting;
-            }
             if (hasNext()) {
                 return getNextMeetingDay();
             }
@@ -55,6 +50,11 @@ public class Calendar implements Iterable<LocalDate> {
         }
 
         private LocalDate getNextMeetingDay() {
+            if (isStartDayTheMeetingDay()) {
+                LocalDate firstMeeting = nextDate;
+                nextDate = nextDate.plus(1, ChronoUnit.DAYS);
+                return firstMeeting;
+            }
             nextDate = nextDate.with(TemporalAdjusters.next(meetingDays.pollFirst()));
             meetingDays.addLast(nextDate.getDayOfWeek());
             return nextDate;
@@ -71,7 +71,7 @@ public class Calendar implements Iterable<LocalDate> {
         return linked;
     }
 
-    private static DayOfWeek addOneDayOrStartNewWeek(DayOfWeek startDay) {
+    private static DayOfWeek addOneDay(DayOfWeek startDay) {
         if (startDay.getValue() > DayOfWeek.SATURDAY.getValue()) {
             startDay = DayOfWeek.MONDAY;
         } else {
@@ -80,7 +80,7 @@ public class Calendar implements Iterable<LocalDate> {
         return startDay;
     }
 
-    private void sortByStartingDate(List<DayOfWeek> days) {
+    private void sortDays(List<DayOfWeek> days) {
         meetingDays = new LinkedList<>();
         DayOfWeek startDay = DayOfWeek.values()[startDate.getDayOfWeek().getValue()];
 
@@ -88,7 +88,7 @@ public class Calendar implements Iterable<LocalDate> {
             if (days.contains(startDay)) {
                 meetingDays.add(startDay);
             }
-            startDay = addOneDayOrStartNewWeek(startDay);
+            startDay = addOneDay(startDay);
         }
     }
 }

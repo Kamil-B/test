@@ -1,6 +1,5 @@
-package date.node;
+package node;
 
-import node.PathMapper;
 import org.junit.Test;
 
 import java.io.IOException;

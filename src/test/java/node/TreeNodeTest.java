@@ -27,7 +27,15 @@ public class TreeNodeTest {
         children.add(child2OfChild1);
 
         val child1 = new NodeImpl<String>("child1", children);
-        val child2 = new NodeImpl<String>("child2");
+
+        val child1OfChild2 = new NodeImpl<String>("child1OfChild2");
+        val child2OfChild2 = new NodeImpl<String>("child2OfChild2");
+
+        children.clear();
+        children.add(child1OfChild2);
+        children.add(child2OfChild2);
+
+        val child2 = new NodeImpl<String>("child2", children);
 
         children.clear();
         children.add(child1);

@@ -30,38 +30,38 @@ public class Calendar implements Iterable<LocalDate> {
 
     private class CalendarIterator implements Iterator<LocalDate> {
 
+        // next returned date or null if no date can be returned
         private LocalDate nextDate;
 
         CalendarIterator() {
-            this.nextDate = setFirstMeeting();
+            this.nextDate = isMeetingDay(startDate) ? startDate : getNextMeetingDay(startDate);
         }
 
         @Override
         public boolean hasNext() {
-            return nextDate.isBefore(stopDate) || nextDate.isEqual(stopDate);
+            return nextDate != null;
         }
 
         @Override
         public LocalDate next() {
-            if (hasNext()) {
-                LocalDate actualDate = nextDate;
-                nextDate = getNextMeetingDay(nextDate);
-                return actualDate;
+            if (nextDate == null) {
+                throw new NoSuchElementException();
             }
-            throw new NoSuchElementException();
+            LocalDate actualDate = nextDate;
+            nextDate = getNextMeetingDay(nextDate);
+            return actualDate;
         }
 
         private LocalDate getNextMeetingDay(LocalDate date) {
             LocalDate nextDate = date.with(TemporalAdjusters.next(meetingDays.poll()));
             meetingDays.add(nextDate.getDayOfWeek());
+            if (nextDate.isAfter(stopDate))
+                return null;
             return nextDate;
         }
 
-        private LocalDate setFirstMeeting() {
-            if (meetingDays.contains(startDate.getDayOfWeek())) {
-                return startDate;
-            }
-            return getNextMeetingDay(startDate);
+        private boolean isMeetingDay(LocalDate startDate) {
+            return meetingDays.contains(startDate.getDayOfWeek());
         }
     }
 

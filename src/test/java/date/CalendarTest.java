@@ -38,8 +38,9 @@ public class CalendarTest {
     public void when_getFirstMeetingWhenInSameDayAsStartDate_thenReturnTrue() {
         LocalDate startDate = LocalDate.of(2018, Month.MARCH, 1);
         LocalDate endDate = startDate.plus(30, ChronoUnit.DAYS);
+        LocalDate actualDate = new Calendar(startDate, endDate, DayOfWeek.THURSDAY).iterator().next();
 
-        assertThat(startDate).isEqualTo(new Calendar(startDate, endDate, DayOfWeek.THURSDAY).iterator().next());
+        assertThat(actualDate).isEqualTo(startDate);
     }
 
     @Test
@@ -48,7 +49,7 @@ public class CalendarTest {
         LocalDate endDate = startDate.plus(30, ChronoUnit.DAYS);
 
         val calendar = new Calendar(startDate, endDate, DayOfWeek.THURSDAY);
-        val expectedMeetingDays = new ArrayList<>();
+        val expectedMeetingDays = new ArrayList<LocalDate>();
         List<LocalDate> actualMeetingsDays = new ArrayList<>();
 
         expectedMeetingDays.add(LocalDate.of(2018, Month.MARCH, 1));

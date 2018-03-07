@@ -12,10 +12,17 @@ public class TreeNodeTest {
     @Test
     public void checkNode() {
 
-        val child1OfChild1 = new NodeImpl<String>("child1OfChild1");
-        val child2OfChild1 = new NodeImpl<String>("child2OfChild1");
+        val child1OfChild1OfChild1 = new NodeImpl<String>("child1OfChild1OfChild1");
+        val child2OfChild1OfChild1 = new NodeImpl<String>("child2OfChild1OfChild1");
 
         val children = new ArrayList<Node<String>>();
+        children.add(child1OfChild1OfChild1);
+        children.add(child2OfChild1OfChild1);
+
+        val child1OfChild1 = new NodeImpl<String>("child1OfChild1", children);
+        val child2OfChild1 = new NodeImpl<String>("child2OfChild1");
+
+        children.clear();
         children.add(child1OfChild1);
         children.add(child2OfChild1);
 

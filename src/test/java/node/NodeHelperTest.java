@@ -2,16 +2,24 @@ package node;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import node.utils.NodeHelper;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
-public class TreeNodeTest {
+public class NodeHelperTest {
 
-    @Test
-    public void checkNode() {
+    private Node<String> parent;
+    private List<Node<String>> expectedChildren;
 
+    @Before
+    public void setUpData() {
         val child1OfChild1OfChild1 = new NodeImpl<String>("child1OfChild1OfChild1");
         val child2OfChild1OfChild1 = new NodeImpl<String>("child2OfChild1OfChild1");
 
@@ -40,9 +48,18 @@ public class TreeNodeTest {
         children.clear();
         children.add(child1);
         children.add(child2);
-        val parent = new NodeImpl<String>("parent", children);
-
-        val helper = new NodeHelper<String>(parent);
-        helper.iterator().forEachRemaining(node -> log.info(node.getPayload()));
+        parent = new NodeImpl<>("parent", children);
+        expectedChildren = new ArrayList<>(Arrays.asList(child1, child2, child1OfChild1, child2OfChild1,
+                child1OfChild2, child2OfChild2, child1OfChild1OfChild1, child2OfChild1OfChild1));
     }
+
+    @Test
+    public void when_getAllChildrenOfTree_returnTrue() {
+        val helper = new NodeHelper<String>(parent);
+        List<Node<String>> actualChildren = new ArrayList<>();
+
+        helper.iterator().forEachRemaining(actualChildren::add);
+        assertThat(actualChildren).isEqualTo(expectedChildren);
+    }
+
 }

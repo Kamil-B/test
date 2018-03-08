@@ -1,13 +1,13 @@
-package node;
+package node.utils;
 
 import lombok.extern.slf4j.Slf4j;
+import node.Node;
 
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
-@Slf4j
 public class NodeHelper<T> implements Iterable<Node<T>> {
 
     private Node<T> root;
@@ -24,11 +24,11 @@ public class NodeHelper<T> implements Iterable<Node<T>> {
     private class NodeHelperIterator implements Iterator<Node<T>> {
 
         private Iterator<Node<T>> iterator;
-        private Queue<Node<T>> children;
+        private Queue<Node<T>> parents;
         private Node<T> next;
 
         NodeHelperIterator() {
-            this.children = new LinkedList<>();
+            this.parents = new LinkedList<>();
             this.iterator = root.getChildren().iterator();
             this.next = iterator.next();
         }
@@ -44,22 +44,25 @@ public class NodeHelper<T> implements Iterable<Node<T>> {
                 throw new NoSuchElementException();
             }
             Node<T> node = next;
-            if (node.getChildren().iterator().hasNext()) {
-                children.add(node);
+            if (hasChildren(node)) {
+                parents.add(node);
             }
             next = getNextNode();
             return node;
         }
 
+        private boolean hasChildren(Node<T> node) {
+            return node.getChildren().iterator().hasNext();
+        }
+
         private Node<T> getNextNode() {
             if (!iterator.hasNext()) {
-                if (children.isEmpty()) {
+                if (parents.isEmpty()) {
                     return null;
                 }
-                iterator = children.poll().getChildren().iterator();
+                iterator = parents.poll().getChildren().iterator();
             }
             return iterator.next();
         }
-
     }
 }

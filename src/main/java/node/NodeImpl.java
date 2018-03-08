@@ -1,10 +1,12 @@
 package node;
 
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
 @ToString
+@EqualsAndHashCode
 public class NodeImpl<T> implements Node<T> {
 
     private T payload;

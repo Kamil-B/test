@@ -1,12 +1,10 @@
 package node.utils;
 
-import lombok.extern.slf4j.Slf4j;
 import node.Node;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.NoSuchElementException;
-import java.util.Queue;
+import java.util.*;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class NodeHelper<T> implements Iterable<Node<T>> {
 
@@ -19,6 +17,11 @@ public class NodeHelper<T> implements Iterable<Node<T>> {
     @Override
     public Iterator<Node<T>> iterator() {
         return new NodeHelperIterator();
+    }
+
+    public Stream<Node<T>> asStream() {
+        return StreamSupport.stream(this.spliterator(), false);
+
     }
 
     private class NodeHelperIterator implements Iterator<Node<T>> {
@@ -50,6 +53,7 @@ public class NodeHelper<T> implements Iterable<Node<T>> {
             next = getNextNode();
             return node;
         }
+
 
         private boolean hasChildren(Node<T> node) {
             return node.getChildren().iterator().hasNext();

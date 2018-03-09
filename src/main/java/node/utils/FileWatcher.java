@@ -4,42 +4,57 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class FileWatcher implements Runnable {
     private WatchService watchService;
-    private Path dir;
-    private volatile boolean shutdown;
+    private Map<Path, WatchKey> watchKeys;
 
     public FileWatcher(Path path) throws IOException {
-        this.dir = path;
-        this.watchService = createWatcher();
-        registerWatcher();
+        this.watchService = createWatcher(path);
+        this.watchKeys = new HashMap<>();
+        registerWatcher(path);
     }
 
     @Override
     public void run() {
-        while (!shutdown) {
-            WatchKey keys = null;
+        WatchKey key = null;
+        while (true) {
             try {
-                keys = watchService.take();
+                key = watchService.take();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-                keys.pollEvents().forEach(event -> log.info(event.kind() + " " + event.context()));
-                keys.reset();
+            for (WatchEvent<?> event : key.pollEvents()) {
+                Path name = ((WatchEvent<Path>) event).context();
+                if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
+                    log.info("folder created" + name.toAbsolutePath());
+                    registerWatcher(name.toAbsolutePath());
+                }
+
+                if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
+                    log.info("folder deleted" + name.toAbsolutePath());
+                }
+            }
+            key.reset();
         }
     }
 
-    public void stop() {
-        shutdown = true;
+    private void registerWatcher(Path path) {
+        try {
+           // Files.list(path).map(path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE))
+            WatchKey watchKey = path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE);
+            watchKeys.put(path, watchKey);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void registerWatcher() throws IOException {
-        dir.register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE);
-    }
-
-    private WatchService createWatcher() throws IOException {
-        return FileSystems.getDefault().newWatchService();
+    private WatchService createWatcher(Path path) throws IOException {
+        return path.getFileSystem().newWatchService();
     }
 }

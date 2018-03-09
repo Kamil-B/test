@@ -9,6 +9,8 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -60,6 +62,14 @@ public class NodeHelperTest {
 
         helper.iterator().forEachRemaining(actualChildren::add);
         assertThat(actualChildren).isEqualTo(expectedChildren);
+    }
+
+    @Test
+    public void when_getStreamOfTree_returnTrue() {
+        val helper = new NodeHelper<String>(parent);
+        Stream<Node<String>> actualStream = helper.asStream();
+        Stream<Node<String>> expectedStream = expectedChildren.stream();
+        assertThat(actualStream.collect(Collectors.toList())).containsAll(expectedStream.collect(Collectors.toList()));
     }
 
 }

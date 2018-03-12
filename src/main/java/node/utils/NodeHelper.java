@@ -21,7 +21,6 @@ public class NodeHelper<T> implements Iterable<Node<T>> {
 
     public Stream<Node<T>> asStream() {
         return StreamSupport.stream(this.spliterator(), false);
-
     }
 
     private class NodeHelperIterator implements Iterator<Node<T>> {

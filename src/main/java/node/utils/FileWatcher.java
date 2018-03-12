@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,14 +13,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FileWatcher implements Runnable {
     private WatchService watchService;
-    private Map<Path, WatchKey> watchKeys;
-    private Path root;
+    private Map<WatchKey, Path> watchKeys;
 
     public FileWatcher(Path path) throws IOException {
-        this.root = path.toAbsolutePath();
-        this.watchService = createWatcher(root);
+        this.watchService = createWatcher(path);
         this.watchKeys = new HashMap<>();
-        registerToWatcher(root);
+        register(path);
     }
 
     @Override
@@ -35,33 +34,48 @@ public class FileWatcher implements Runnable {
             for (WatchEvent<?> event : key.pollEvents()) {
                 Path path = ((WatchEvent<Path>) event).context();
                 if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
-                    log.info("folder created " + path);
-                    registerToWatcher(path);
+                    log.info("file created " + path);
+                    register(watchKeys.get(key).resolve(path.getFileName()));
                 }
                 if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
-                    log.info("folder deleted " + path);
+                    log.info("file deleted " + path);
                 }
             }
             key.reset();
         }
     }
 
-    private void registerToWatcher(Path dir) {
-        try {
-            dir.toAbsolutePath().register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE);
-            for (Path subDir : getSubDirectories(dir)) {
-                registerToWatcher(subDir);
-                subDir.toAbsolutePath().register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE);
-                log.info("registered path: " + subDir);
-                //watchKeys.put(dir, watchKey);
+    public List<Path> getWatchedPaths() {
+        return new ArrayList<>(watchKeys.values());
+    }
+
+    private void register(Path path) {
+        if (Files.isDirectory(path)) {
+            registerWatcher(path);
+            for (Path subDir : getSubDirectories(path)) {
+                register(subDir);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
-    private List<Path> getSubDirectories(Path path) throws IOException {
-        return Files.list(path).filter(Files::isDirectory).collect(Collectors.toList());
+    private void registerWatcher(Path dir) {
+        WatchKey key = null;
+        try {
+            key = dir.register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        log.info("path registered to watcher: " + dir);
+        watchKeys.put(key, dir);
+    }
+
+    private List<Path> getSubDirectories(Path path) {
+        try {
+            return Files.list(path).filter(Files::isDirectory).collect(Collectors.toList());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
     }
 
     private WatchService createWatcher(Path path) throws IOException {

@@ -5,12 +5,13 @@ import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
+
 @ToString
 @EqualsAndHashCode
 public class NodeImpl<T> implements Node<T> {
 
     private T payload;
-    private Iterable<Node<T>> children;
+    private List<Node<T>> children;
 
     public NodeImpl(T payload) {
         this.payload = payload;
@@ -28,7 +29,17 @@ public class NodeImpl<T> implements Node<T> {
     }
 
     @Override
-    public Iterable<Node<T>> getChildren() {
+    public List<Node<T>> getChildren() {
         return children;
+    }
+
+    @Override
+    public boolean addChild(Node<T> node) {
+        return children.add(node);
+    }
+
+    @Override
+    public boolean removeChild(Node<T> node) {
+        return children.remove(node);
     }
 }

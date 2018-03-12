@@ -4,9 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 @Slf4j
 public class FileWatcherService {
@@ -16,7 +14,7 @@ public class FileWatcherService {
     private Future future;
 
     public FileWatcherService() {
-        this.executorService = Executors.newSingleThreadExecutor();
+        this.executorService = Executors.newSingleThreadScheduledExecutor();
     }
 
     public void watchDirectory(Path path) {
@@ -27,4 +25,5 @@ public class FileWatcherService {
             e.printStackTrace();
         }
     }
+
 }

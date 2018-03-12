@@ -2,7 +2,10 @@ package node.utils;
 
 import node.Node;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.NoSuchElementException;
+import java.util.Queue;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -32,7 +35,7 @@ public class NodeHelper<T> implements Iterable<Node<T>> {
         NodeHelperIterator() {
             this.parents = new LinkedList<>();
             this.iterator = root.getChildren().iterator();
-            this.next = iterator.next();
+            this.next = iterator.hasNext() ? iterator.next() : null;
         }
 
         @Override

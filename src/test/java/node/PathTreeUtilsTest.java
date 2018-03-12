@@ -3,19 +3,17 @@ package node;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import node.utils.NodeHelper;
-import node.utils.PathsTreeGenerator;
+import node.utils.PathTreeUtils;
 import org.junit.Test;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
-public class PathsTreeGeneratorTest {
+public class PathTreeUtilsTest {
 
     @Test
     public void generateTree() {
@@ -27,7 +25,7 @@ public class PathsTreeGeneratorTest {
         val folder2 = new NodeImpl<Path>(Paths.get("src\\test\\resources\\test_folder\\folder2"), Arrays.asList(subfolder2));
         val expectedNodeTree = new NodeImpl<>(Paths.get("src\\test\\resources\\test_folder"), Arrays.asList(folder1, folder2));
 
-        Node<Path> actualNodeTree = PathsTreeGenerator.createPathTree(Paths.get("src\\test\\resources\\test_folder"));
+        Node<Path> actualNodeTree = PathTreeUtils.createPathTree(Paths.get("src\\test\\resources\\test_folder"));
         new NodeHelper<>(actualNodeTree).iterator().forEachRemaining(node -> log.info(node.getPayload().toString()));
         assertThat(actualNodeTree).isEqualTo(expectedNodeTree);
     }

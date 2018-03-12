@@ -1,8 +1,10 @@
-import node.utils.FileWatcherService;
+import node.service.FileWatcherService;
+import node.service.FileWatcherServiceImpl;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Primary;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -16,10 +18,15 @@ public class TestApplication {
     }
 
     @Bean
-    public FileWatcherService createWatcherService() throws IOException {
-        FileWatcherService fileWatcherService= new FileWatcherService();
-        fileWatcherService.getWatcher(Paths.get("C:\\git\\tree_test"));
-        return fileWatcherService;
+    @Primary
+    public FileWatcherService createFileWatcher() {
+        FileWatcherService watcher = new FileWatcherServiceImpl();
+        try {
+            watcher.registerPath(Paths.get("C:\\git\\tree_test"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return watcher;
     }
 
 }

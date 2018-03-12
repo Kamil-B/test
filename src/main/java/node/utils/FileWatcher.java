@@ -1,58 +1,84 @@
 package node.utils;
 
 import lombok.extern.slf4j.Slf4j;
+import node.dto.FileWatcherEvent;
+import node.dto.FileWatcherEventType;
 
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Queue;
 
 @Slf4j
-public class FileWatcher implements Runnable {
+public class FileWatcher {
+
     private WatchService watchService;
     private Map<WatchKey, Path> watchKeys;
+    private Queue<FileWatcherEvent> events;
+
 
     public FileWatcher(Path path) throws IOException {
         this.watchService = createWatcher(path);
+        this.events = new LinkedList<>();
         this.watchKeys = new HashMap<>();
         register(path);
     }
 
-    @Override
-    public void run() {
+    public void update() {
         WatchKey key = null;
-        while (true) {
-            try {
-                key = watchService.take();
-                log.info("key taken");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        try {
+            key = watchService.take();
+            log.info("key taken");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (key != null) {
             for (WatchEvent<?> event : key.pollEvents()) {
-                Path path = ((WatchEvent<Path>) event).context();
+                String fileName = ((WatchEvent<Path>) event).context().getFileName().toString();
+                Path path = watchKeys.get(key).resolve(fileName);
+                FileWatcherEvent fileWatcherEvent = new FileWatcherEvent(path);
+
                 if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
-                    log.info("file created " + path);
-                    register(watchKeys.get(key).resolve(path.getFileName()));
+                    register(watchKeys.get(key).resolve(fileName));
+                    addToEvents(fileWatcherEvent, FileWatcherEventType.CREATE);
                 }
                 if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
-                    log.info("file deleted " + path);
+                    addToEvents(fileWatcherEvent, FileWatcherEventType.DELETE);
+
                 }
             }
             key.reset();
         }
+
     }
 
-    public List<Path> getWatchedPaths() {
-        return new ArrayList<>(watchKeys.values());
+    public Queue getEvent() {
+        return events;
     }
+
+    private void addToEvents(FileWatcherEvent fileWatcherEvent, FileWatcherEventType create) {
+        fileWatcherEvent.setFileWatcherEventType(create);
+        log.info("Event occurred: " + fileWatcherEvent);
+        events.add(fileWatcherEvent);
+    }
+
+/*    private void addToNodeTree(Path path) {
+        log.info("adding path to tree: " + path);
+        while (node.iterator().hasNext()) {
+            Node<Path> node = root.iterator().next();
+            if (node.getPayload().equals(path.getParent())) {
+                node.addChild(PathTreeUtils.createPathTree(path));
+                return;
+            }
+        }
+    }*/
 
     private void register(Path path) {
         if (Files.isDirectory(path)) {
             registerWatcher(path);
-            for (Path subDir : getSubDirectories(path)) {
+            for (Path subDir : PathTreeUtils.getAllSubDirectories(path)) {
                 register(subDir);
             }
         }
@@ -67,15 +93,7 @@ public class FileWatcher implements Runnable {
         }
         log.info("path registered to watcher: " + dir);
         watchKeys.put(key, dir);
-    }
 
-    private List<Path> getSubDirectories(Path path) {
-        try {
-            return Files.list(path).filter(Files::isDirectory).collect(Collectors.toList());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return new ArrayList<>();
     }
 
     private WatchService createWatcher(Path path) throws IOException {

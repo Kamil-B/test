@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class PathsTreeGenerator {
+public class PathTreeUtils {
 
     public static Node<Path> createPathTree(Path path) {
         return new NodeImpl<>(path, convertFilesToNodes(getChildren(path)));
@@ -28,7 +28,7 @@ public class PathsTreeGenerator {
         return getAllSubDirectories(path);
     }
 
-    private static List<Path> getAllSubDirectories(Path path) {
+    public static List<Path> getAllSubDirectories(Path path) {
         try {
             return Files.list(path).collect(Collectors.toList());
         } catch (IOException e) {

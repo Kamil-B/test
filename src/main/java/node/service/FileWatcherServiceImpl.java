@@ -1,37 +1,99 @@
 package node.service;
 
+import com.sun.nio.file.SensitivityWatchEventModifier;
 import lombok.extern.slf4j.Slf4j;
-import node.service.FileWatcherService;
-import node.utils.FileWatcher;
+import node.utils.NodeHelperUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
 public class FileWatcherServiceImpl implements FileWatcherService {
 
-    private Map<Path, FileWatcher> fileWatchers;
+    private WatchService watchService;
+    private Map<WatchKey, Path> watchKeys;
 
     public FileWatcherServiceImpl() {
-        this.fileWatchers = new HashMap<>();
+        this.watchKeys = new HashMap<>();
     }
 
-    public FileWatcher registerPath(Path path) throws IOException {
-        if (fileWatchers.containsKey(path)) {
-            return fileWatchers.get(path);
+    @Override
+    public boolean watch(Path path) {
+        if (!Files.exists(path)) {
+            throw new IllegalArgumentException("Given Path doesn't exist!!");
         }
-        FileWatcher fileWatcher = new FileWatcher(path);
-        fileWatchers.put(path, fileWatcher);
-        return fileWatcher;
+        if (watchService == null) {
+            initiateWatchService(path);
+        }
+        register(path);
+        return true;
     }
 
-    public void update(){
-        for(FileWatcher fileWatcher: fileWatchers.values()){
-            fileWatcher.update();
+    @Override
+    public void update() {
+        if (watchKeys.isEmpty()) {
+            return;
+        }
+        WatchKey key = null;
+        try {
+            key = watchService.take();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (key == null) {
+            return;
+        }
+        for (WatchEvent<?> event : key.pollEvents()) {
+            String fileName = ((WatchEvent<Path>) event).context().getFileName().toString();
+
+            if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
+                register(watchKeys.get(key).resolve(fileName));
+            }
+            if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
+
+            }
+        }
+        key.reset();
+    }
+
+    public Set<Path> getWatchedPaths() {
+        return new HashSet<>(watchKeys.values());
+    }
+
+    private void register(Path path) {
+        if (Files.isDirectory(path)) {
+            registerWatcher(path);
+            for (Path subDir : NodeHelperUtils.getAllSubDirectories(path)) {
+                register(subDir);
+            }
+        } else {
+            log.info("New file found: " + path);
+        }
+    }
+
+    private void registerWatcher(Path dir) {
+        WatchKey key = null;
+        try {
+            key = dir.register(watchService, new WatchEvent.Kind[]{StandardWatchEventKinds.ENTRY_CREATE,
+                    StandardWatchEventKinds.ENTRY_DELETE}, SensitivityWatchEventModifier.HIGH);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        log.info("New folder found: " + dir + ". Added to watcher registry");
+        watchKeys.put(key, dir);
+    }
+
+    private void initiateWatchService(Path path) {
+        try {
+            watchService = path.toAbsolutePath().getFileSystem().newWatchService();
+        } catch (IOException e) {
+            log.error("Couldn't initiate service with " + path + ". " + e.getMessage());
         }
     }
 }

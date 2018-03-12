@@ -16,8 +16,7 @@ public class UpdateService {
 
     @Scheduled(cron = "*/1 * * * * *")
     public void getUpdatedPaths() {
-
-       fileWatcherService.update();
+        fileWatcherService.update();
     }
 
 

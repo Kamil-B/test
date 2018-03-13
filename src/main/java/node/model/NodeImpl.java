@@ -1,7 +1,8 @@
-package node;
+package node.model;
 
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import node.model.Node;
 
 import java.util.ArrayList;
 import java.util.List;

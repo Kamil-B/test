@@ -1,16 +1,21 @@
 package node.service;
 
 import com.sun.nio.file.SensitivityWatchEventModifier;
+import io.reactivex.Observable;
 import lombok.extern.slf4j.Slf4j;
+import node.model.Event;
+import node.model.EventType;
 import node.utils.NodeHelperUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @Service
@@ -18,21 +23,25 @@ public class FileWatcherServiceImpl implements FileWatcherService {
 
     private WatchService watchService;
     private Map<WatchKey, Path> watchKeys;
+    private List<Event> events = new LinkedList<>();
+    private FileWatcher fileWatcher;
+    private Observable<Event> observable = Observable.fromIterable(events);
 
     public FileWatcherServiceImpl() {
         this.watchKeys = new HashMap<>();
     }
 
     @Override
-    public boolean watch(Path path) {
+    // Autoclosable
+    public Observable<Event> startWatching(Path path) {
         if (!Files.exists(path)) {
-            throw new IllegalArgumentException("Given Path doesn't exist!!");
+            return Observable.empty();
         }
         if (watchService == null) {
-            initiateWatchService(path);
+            startFileWatcher(path);
         }
         register(path);
-        return true;
+        return observable;
     }
 
     @Override
@@ -46,24 +55,22 @@ public class FileWatcherServiceImpl implements FileWatcherService {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        if (key == null) {
+        if (key == null || !watchKeys.containsKey(key)) {
             return;
         }
         for (WatchEvent<?> event : key.pollEvents()) {
             String fileName = ((WatchEvent<Path>) event).context().getFileName().toString();
+            Path path = watchKeys.get(key).resolve(fileName);
 
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
-                register(watchKeys.get(key).resolve(fileName));
+                register(path);
+                events.add(new Event(path, EventType.CREATE));
             }
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
-
+                events.add(new Event(path, EventType.DELETE));
             }
         }
         key.reset();
-    }
-
-    public Set<Path> getWatchedPaths() {
-        return new HashSet<>(watchKeys.values());
     }
 
     private void register(Path path) {
@@ -89,11 +96,14 @@ public class FileWatcherServiceImpl implements FileWatcherService {
         watchKeys.put(key, dir);
     }
 
-    private void initiateWatchService(Path path) {
+    private void startFileWatcher(Path path) {
         try {
             watchService = path.toAbsolutePath().getFileSystem().newWatchService();
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            future = executorService.submit(new FileWatcher(events));
         } catch (IOException e) {
             log.error("Couldn't initiate service with " + path + ". " + e.getMessage());
         }
+
     }
 }

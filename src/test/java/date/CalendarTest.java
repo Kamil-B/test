@@ -111,7 +111,7 @@ public class CalendarTest {
     }
 
     @Test(expected = NoSuchElementException.class)
-    public void when_noMeetingsBetweenStartAndEndDate_then_ReturnNoSuchElementException() {
+    public void when_noMeetingsBetweenStartAndEndDate_then_NoSuchElementExceptionThrown() {
         LocalDate startDate = LocalDate.of(2018, Month.MARCH, 6);
         LocalDate endDate = LocalDate.of(2018, Month.MARCH, 9);
         val calendar = new Calendar(startDate, endDate, DayOfWeek.MONDAY);
@@ -119,7 +119,7 @@ public class CalendarTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void when_endDateIsBeforeStartDate_thenReturn_IllegalArgumentException() {
+    public void when_endDateIsBeforeStartDate_then_IllegalArgumentExceptionThrown() {
         LocalDate startDate = LocalDate.of(2018, Month.MARCH, 1);
         LocalDate endDate = startDate.minus(30, ChronoUnit.DAYS);
         new Calendar(startDate, endDate, DayOfWeek.THURSDAY);

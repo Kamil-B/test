@@ -1,6 +1,6 @@
 package node.utils;
 
-import node.Node;
+import node.model.Node;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -9,30 +9,30 @@ import java.util.Queue;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class NodeHelper<T> implements Iterable<Node<T>> {
+public class NodeTree<T> implements Iterable<Node<T>> {
 
     private Node<T> root;
 
-    public NodeHelper(Node<T> root) {
+    public NodeTree(Node<T> root) {
         this.root = root;
     }
 
     @Override
     public Iterator<Node<T>> iterator() {
-        return new NodeHelperIterator();
+        return new NodeTreeIterator();
     }
 
     public Stream<Node<T>> asStream() {
         return StreamSupport.stream(this.spliterator(), false);
     }
 
-    private class NodeHelperIterator implements Iterator<Node<T>> {
+    private class NodeTreeIterator implements Iterator<Node<T>> {
 
         private Iterator<Node<T>> iterator;
         private Queue<Node<T>> parents;
         private Node<T> next;
 
-        NodeHelperIterator() {
+        NodeTreeIterator() {
             this.parents = new LinkedList<>();
             this.iterator = root.getChildren().iterator();
             this.next = iterator.hasNext() ? iterator.next() : null;

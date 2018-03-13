@@ -1,10 +1,14 @@
 package node.service;
 
+import io.reactivex.Observable;
+import node.model.Event;
+
 import java.nio.file.Path;
 
 public interface FileWatcherService {
 
     void update();
 
-    boolean watch(Path path);
+    Observable<Event> startWatching(Path path);
+
 }

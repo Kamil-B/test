@@ -1,7 +1,7 @@
 package node.utils;
 
-import node.Node;
-import node.NodeImpl;
+import node.model.Node;
+import node.model.NodeImpl;
 
 import java.io.IOException;
 import java.nio.file.Files;

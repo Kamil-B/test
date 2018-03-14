@@ -22,6 +22,7 @@ public class WatchServiceController {
     @GetMapping(value = "/add")
     public ResponseEntity addPathToWatchService(@RequestParam(value = "path") Path path) {
         log.info("Received path request: " + path);
-        return ResponseEntity.ok(fileWatcherService.startWatching(path));
+        fileWatcherService.startWatching(path);
+        return ResponseEntity.noContent().build();
     }
 }

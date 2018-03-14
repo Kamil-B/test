@@ -3,70 +3,47 @@ package node;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import io.reactivex.Observable;
-import io.reactivex.subjects.ReplaySubject;
 import lombok.extern.slf4j.Slf4j;
 import node.model.Event;
 import node.model.EventType;
-import node.service.FileWatcherServiceImpl;
+import node.service.FileWatcherService;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
 public class FileWatcherServiceTest {
 
     @Test
-    public void watchDirectoryCreation_SameAsExpected() throws IOException {
-        List<Path> expectedPaths = new ArrayList<>();
-        FileSystem fs = Jimfs.newFileSystem(Configuration.windows());
-        Path root = fs.getPath("root");
-        expectedPaths.add(Files.createDirectory(root));
+    public void addNotExistedPath_returnEmpty() {
+        FileWatcherService fileWatcher = new FileWatcherService();
+        Observable<Event> observable = fileWatcher.startWatching(Paths.get("C:\\path\\does\\not\\exist"));
 
-        FileWatcherServiceImpl fileWatcher = new FileWatcherServiceImpl();
-        fileWatcher.startWatching(root);
-
-        expectedPaths.add(Files.createDirectory(fs.getPath("root/folder1")));
-        expectedPaths.add(Files.createDirectory(fs.getPath("root/folder2")));
-        expectedPaths.add(Files.createDirectory(fs.getPath("root/folder1/subfolder1")));
-        expectedPaths.add(Files.createDirectory(fs.getPath("root/folder1/subfolder2")));
-
-        fileWatcher.update();
-
-/*        Set<Path> actualPaths = fileWatcher.getWatchedPaths();
-        assertThat(actualPaths).containsAll(expectedPaths);*/
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void addNotExistingPath_IllegalArgumentExceptionThrown() {
-        FileWatcherServiceImpl fileWatcher = new FileWatcherServiceImpl();
-        fileWatcher.startWatching(Paths.get("C:\\unreal\\path"));
+        Iterable<Event> items = observable.blockingIterable();
+        assertThat(items.iterator()).isEmpty();
     }
 
     @Test
-    public void test() throws IOException, InterruptedException {
-
+    public void addNewPathsToWatchedDirectory_returnNewEvents() throws IOException, InterruptedException {
         FileSystem fs = Jimfs.newFileSystem(Configuration.windows());
-        Path root = fs.getPath("root");
-        Files.createDirectory(fs.getPath("root"));
+
+        FileWatcherService fileWatcher = new FileWatcherService();
+        Observable<Event> observable = fileWatcher.startWatching(Files.createDirectory(fs.getPath("root")));
+
         List<Event> expectedEvents = new ArrayList<>();
-
-        FileWatcherServiceImpl fileWatcher = new FileWatcherServiceImpl();
-        fileWatcher.startWatching(root);
-
         expectedEvents.add(new Event(Files.createDirectory(fs.getPath("root/folder1")), EventType.CREATE));
-        Thread.sleep(5000);
+        expectedEvents.add(new Event(Files.createDirectory(fs.getPath("root/folder2")), EventType.CREATE));
 
-        Observable<Event> observable = fileWatcher.update();
-        ReplaySubject<Event> subscriber = ReplaySubject.create();
-        observable.subscribe(subscriber);
+        Thread.sleep(5000); // wait for fileWatcher to notice changes
 
-        Iterable<Event> items = subscriber.blockingIterable();
-        items.forEach(item -> log.info(item.toString()));
+        Iterable<Event> items = observable.blockingIterable();
+        assertThat(items.iterator()).containsAll(expectedEvents);
     }
 }

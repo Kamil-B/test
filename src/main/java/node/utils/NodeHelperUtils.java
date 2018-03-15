@@ -13,6 +13,9 @@ import java.util.stream.Collectors;
 public class NodeHelperUtils {
 
     public static Node<Path> createPathTree(Path path) {
+        if (!Files.exists(path)) {
+            throw new IllegalArgumentException("file does not exist");
+        }
         return new NodeImpl<>(path, convertFilesToNodes(getChildren(path)));
     }
 

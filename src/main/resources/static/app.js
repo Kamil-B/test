@@ -1,27 +1,42 @@
 var stompClient = null;
+var files_paths = [];
 
 function setConnected(connected) {
     $("#connect").prop("disabled", connected);
     $("#disconnect").prop("disabled", !connected);
     if (connected) {
-        $("#conversation").show();
+        $("#filestree").show();
     }
     else {
-        $("#conversation").hide();
+        $("#filestree").hide();
     }
-    $("#greetings").html("");
+    $("#files").html("");
 }
 
 function connect() {
-    var socket = new SockJS('/gs-guide-websocket');
+    var socket = new SockJS('/websocket');
     stompClient = Stomp.over(socket);
     stompClient.connect({}, function (frame) {
         setConnected(true);
-        console.log('Connected: ' + frame);
-        stompClient.subscribe('/topic/greetings', function (greeting) {
-            showGreeting(JSON.parse(greeting.body).name);
+        stompClient.subscribe('/topic/file', function (message) {
+        var event = JSON.parse(message.body)
+        addOrRemove(event);
+            showGreeting();
         });
     });
+}
+
+    function addOrRemove(event){
+
+    if(event["eventType"] == "CREATE" && $.inArray(event["path"], files_paths) == -1){
+    files_paths.push(event["path"]);
+    console.log(event["eventType"]);
+    }
+   else if(event["eventType"] == "DELETE"){
+    files_paths = jQuery.grep(files_paths, function(value) {
+                  return value != event["path"];
+                });
+    }
 }
 
 function disconnect() {
@@ -32,19 +47,27 @@ function disconnect() {
     console.log("Disconnected");
 }
 
-function sendName() {
-    stompClient.send("/app/hello", {}, JSON.stringify({'name': $("#name").val()}));
+function sendPath() {
+files_paths = [];
+ $("#files").empty();
+    stompClient.send("/app/path", {}, JSON.stringify({
+    'path': $("#path").val()}));
 }
 
-function showGreeting(message) {
-    $("#greetings").append("<tr><td>" + message + "</td></tr>");
+function showGreeting() {
+    $("#files").empty();
+    $.each(files_paths, function(index, value){
+    $("#files").append("<tr><td>" + value + "</td></tr>");
+    });
+
 }
 
 $(function () {
+    connect();
     $("form").on('submit', function (e) {
         e.preventDefault();
     });
-    $( "#connect" ).click(function() { connect(); });
+
     $( "#disconnect" ).click(function() { disconnect(); });
-    $( "#send" ).click(function() { sendName(); });
+    $( "#send" ).click(function() {sendPath(); });
 });

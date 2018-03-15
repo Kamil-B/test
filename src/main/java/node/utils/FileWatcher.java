@@ -62,15 +62,12 @@ public class FileWatcher implements Runnable {
 
             }
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
-                addEvent(path, EventType.DELETE);
-                removeFromWatched(key);
+                    addEvent(path, EventType.DELETE);
             }
         }
-        key.reset();
-    }
-
-    private void removeFromWatched(WatchKey key) {
-        watchKeys.remove(key);
+        if(!key.reset()){
+            watchKeys.remove(key);
+        }
     }
 
     private void addEvent(Path path, EventType type) {
@@ -79,6 +76,9 @@ public class FileWatcher implements Runnable {
     }
 
     private void registerToWatcher(Path dir) {
+        if (watchKeys.values().contains(dir)) {
+            return;
+        }
         try {
             WatchKey key = dir.register(watchService, new WatchEvent.Kind[]{StandardWatchEventKinds.ENTRY_CREATE,
                     StandardWatchEventKinds.ENTRY_DELETE}, SensitivityWatchEventModifier.HIGH);

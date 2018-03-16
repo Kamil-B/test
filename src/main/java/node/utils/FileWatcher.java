@@ -5,11 +5,13 @@ import io.reactivex.Observable;
 import lombok.extern.slf4j.Slf4j;
 import node.model.Event;
 import node.model.EventType;
+import node.model.Node;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 public class FileWatcher implements Runnable {
@@ -20,7 +22,7 @@ public class FileWatcher implements Runnable {
     private NodeTree<Path> tree;
 
     public FileWatcher(Queue<Event> events, WatchService watchService, Path path) {
-        //this.tree;
+        this.tree = new NodeTree<>(NodeUtils.createPathTree(path));
         this.events = events;
         this.watchService = watchService;
         this.watchKeys = new HashMap<>();
@@ -66,11 +68,9 @@ public class FileWatcher implements Runnable {
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
                 log.info("Event occurred: " + EventType.DELETE + " " + path);
                 events.add(new Event(path, EventType.DELETE));
-                if (Files.isDirectory(path))
-                    events.addAll(tree.removeBranch(path)
-                            .stream()
-                            .map(element -> new Event(element, EventType.DELETE))
-                            .collect(Collectors.toList()));
+/*                events.addAll(removeBranch(path)
+                        .map(element -> new Event(element, EventType.DELETE))
+                        .collect(Collectors.toList()));*/
             }
         }
         if (!key.reset()) {
@@ -78,6 +78,29 @@ public class FileWatcher implements Runnable {
         }
         return events;
     }
+
+/*    private Stream<Path> removeBranch(Path path) {
+        Node<Path> parent = null;
+        Node<Path> actual = null;
+        for (Node<Path> node : tree) {
+            if (node.getPayload().equals(path)) {
+                log.info("parent found: " + node.toString());
+                 parent = node;
+                 actuals = node.getChildren();
+
+            }else if(node.getPayload().equals(path)){
+                actual = node;
+            }
+        }
+        log.info(parent + " " + actual);
+        if (parent != null && actual != null) {
+            parent.removeChild(actual);
+            return actual.getChildren().stream().map(Node::getPayload).collect(Collectors.toList()).stream();
+        }
+
+        return Stream.empty();
+        }*/
+
 
     private void registerToWatcher(Path dir) {
         if (watchKeys.values().contains(dir)) {

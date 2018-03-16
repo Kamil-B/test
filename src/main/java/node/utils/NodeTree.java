@@ -24,21 +24,6 @@ public class NodeTree<T> implements Iterable<Node<T>> {
         return StreamSupport.stream(this.spliterator(), false);
     }
 
-    public List<Path> removeBranch(Path path) {
-        List<Path> events = new ArrayList<>();
-        for (Node<T> node : this) {
-            if (node.getPayload().equals(path)) {
-                new NodeTree<>(node).iterator().forEachRemaining(element -> events.add(path));
-               // removeFromTree(node);
-                return events;
-            }
-        }
-        return events;
-    }
-
-/*    private void removeFromTree(Node<T> node) {
-        this.
-    }*/
 
     private class NodeTreeIterator implements Iterator<Node<T>> {
 

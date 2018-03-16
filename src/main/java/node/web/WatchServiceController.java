@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import node.service.FileWatcherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,7 +18,7 @@ import java.nio.file.Path;
 public class WatchServiceController {
 
     @Autowired
-    FileWatcherService fileWatcherService;
+    private FileWatcherService fileWatcherService;
 
     @GetMapping(value = "/add")
     public ResponseEntity addPathToWatchService(@RequestParam(value = "path") Path path) {

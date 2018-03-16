@@ -2,10 +2,8 @@ package node.utils;
 
 import node.model.Node;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.NoSuchElementException;
-import java.util.Queue;
+import java.nio.file.Path;
+import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -25,6 +23,22 @@ public class NodeTree<T> implements Iterable<Node<T>> {
     public Stream<Node<T>> asStream() {
         return StreamSupport.stream(this.spliterator(), false);
     }
+
+    public List<Path> removeBranch(Path path) {
+        List<Path> events = new ArrayList<>();
+        for (Node<T> node : this) {
+            if (node.getPayload().equals(path)) {
+                new NodeTree<>(node).iterator().forEachRemaining(element -> events.add(path));
+               // removeFromTree(node);
+                return events;
+            }
+        }
+        return events;
+    }
+
+/*    private void removeFromTree(Node<T> node) {
+        this.
+    }*/
 
     private class NodeTreeIterator implements Iterator<Node<T>> {
 

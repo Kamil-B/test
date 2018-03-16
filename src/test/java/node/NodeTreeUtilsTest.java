@@ -7,7 +7,7 @@ import lombok.val;
 import node.model.Node;
 import node.model.NodeImpl;
 import node.utils.NodeTree;
-import node.utils.NodeHelperUtils;
+import node.utils.NodeUtils;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -39,7 +39,7 @@ public class NodeTreeUtilsTest {
         val folder2 = new NodeImpl<Path>(fs.getPath("root/folder2"));
         val expectedNodeTree = new NodeImpl<Path>(fs.getPath("root"), Arrays.asList(folder1, folder2));
 
-        Node<Path> actualNodeTree = NodeHelperUtils.createPathTree(root);
+        Node<Path> actualNodeTree = NodeUtils.createPathTree(root);
         new NodeTree<>(actualNodeTree).iterator().forEachRemaining(node -> log.info(node.getPayload().toString()));
         assertThat(actualNodeTree).isEqualTo(expectedNodeTree);
     }

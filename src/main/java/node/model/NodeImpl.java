@@ -2,6 +2,7 @@ package node.model;
 
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import node.model.Node;
 
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.List;
 
 @ToString
 @EqualsAndHashCode
+@Slf4j
 public class NodeImpl<T> implements Node<T> {
 
     private T payload;
@@ -41,6 +43,7 @@ public class NodeImpl<T> implements Node<T> {
 
     @Override
     public boolean removeChild(Node<T> node) {
+        log.info("Removed: " + node.toString());
         return children.remove(node);
     }
 }

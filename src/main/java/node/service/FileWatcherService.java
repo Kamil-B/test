@@ -27,7 +27,12 @@ public class FileWatcherService {
 
     public FileWatcherService() {
         this.events = new ConcurrentLinkedQueue<>();
-        this.observable = Observable.fromIterable(events).doAfterNext(event -> events.remove(event));
+        this.observable = Observable.fromIterable(events).doAfterNext(event ->
+                {
+                    log.info("Event occurred: " + event.toString());
+                    events.remove(event);
+                }
+        );
     }
 
     // Autoclosable

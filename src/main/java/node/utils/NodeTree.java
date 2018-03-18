@@ -2,8 +2,10 @@ package node.utils;
 
 import node.model.Node;
 
-import java.nio.file.Path;
-import java.util.*;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.NoSuchElementException;
+import java.util.Queue;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -24,6 +26,9 @@ public class NodeTree<T> implements Iterable<Node<T>> {
         return StreamSupport.stream(this.spliterator(), false);
     }
 
+    public Node<T> getRoot() {
+        return root;
+    }
 
     private class NodeTreeIterator implements Iterator<Node<T>> {
 
@@ -54,7 +59,6 @@ public class NodeTree<T> implements Iterable<Node<T>> {
             next = getNextNode();
             return node;
         }
-
 
         private boolean hasChildren(Node<T> node) {
             return node.getChildren().iterator().hasNext();

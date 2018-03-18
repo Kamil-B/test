@@ -61,16 +61,15 @@ public class FileWatcher implements Runnable {
             Path path = watchKeys.get(key).resolve(fileName);
 
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
-                log.info("Event occurred: " + EventType.CREATE + " " + path);
                 events.add(new Event(path, EventType.CREATE));
                 addToWatched(path);
+                addToTree(path);
             }
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
-                log.info("Event occurred: " + EventType.DELETE + " " + path);
                 events.add(new Event(path, EventType.DELETE));
-/*                events.addAll(removeBranch(path)
+                events.addAll(removeBranch(path)
                         .map(element -> new Event(element, EventType.DELETE))
-                        .collect(Collectors.toList()));*/
+                        .collect(Collectors.toList()));
             }
         }
         if (!key.reset()) {
@@ -79,28 +78,23 @@ public class FileWatcher implements Runnable {
         return events;
     }
 
-/*    private Stream<Path> removeBranch(Path path) {
-        Node<Path> parent = null;
-        Node<Path> actual = null;
-        for (Node<Path> node : tree) {
-            if (node.getPayload().equals(path)) {
-                log.info("parent found: " + node.toString());
-                 parent = node;
-                 actuals = node.getChildren();
+    private void addToTree(Path path) {
+        Optional<Node<Path>> parent = tree.asStream().filter(node -> node.getPayload().equals(path.getParent())).findFirst();
+        parent.ifPresent(node -> node.addChild(NodeUtils.createPathTree(path)));
+    }
 
-            }else if(node.getPayload().equals(path)){
-                actual = node;
-            }
+    private Stream<Path> removeBranch(Path path) {
+        Optional<Node<Path>> toRemove = tree.asStream().filter(element -> element.getPayload().equals(path)).findFirst();
+        Optional<Node<Path>> parent = tree.asStream().filter(element -> element.getPayload().equals(path.getParent())).findFirst();
+
+        if (parent.isPresent()) {
+            parent.get().removeChild(toRemove.get());
+        } else if (tree.getRoot().getChildren().contains(toRemove.get())) {
+            tree.getRoot().removeChild(toRemove.get());
         }
-        log.info(parent + " " + actual);
-        if (parent != null && actual != null) {
-            parent.removeChild(actual);
-            return actual.getChildren().stream().map(Node::getPayload).collect(Collectors.toList()).stream();
-        }
-
-        return Stream.empty();
-        }*/
-
+        return new NodeTree<>(toRemove.get()).asStream()
+                .map(Node::getPayload).collect(Collectors.toList()).stream();
+    }
 
     private void registerToWatcher(Path dir) {
         if (watchKeys.values().contains(dir)) {
@@ -114,7 +108,5 @@ public class FileWatcher implements Runnable {
             e.printStackTrace();
         }
         log.info("New folder found: " + dir + ". Added to watcher registry");
-
     }
-
 }

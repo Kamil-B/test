@@ -31,16 +31,14 @@ public class FileWatcher implements Runnable {
 
     @Override
     public void run() {
-        while (!watchKeys.isEmpty()) {
+        //while (!watchKeys.isEmpty()) {
             try {
-                Observable.fromArray(watchService.take())
-                        .map(this::update)
-                        .flatMapIterable(event -> event)
-                        .subscribe(event -> events.add(event));
+                WatchKey id = Observable.fromArray(watchService.take()).blockingFirst();
+                events.addAll(update(id));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }
+       // }
     }
 
     public void addToWatched(Path path) {

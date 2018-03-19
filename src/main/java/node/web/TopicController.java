@@ -33,7 +33,7 @@ public class TopicController {
     private SimpMessagingTemplate template;
 
     @MessageMapping("/path")
-    @SendTo("/topic/{file}")
+    @SendTo("/topic/file")
     public void tree_generator(SubscriptionMessage message) {
         observable = fileWatcherService.startWatching(Paths.get(message.getPath()));
 

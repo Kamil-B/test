@@ -33,7 +33,8 @@ public class FileWatcher implements Runnable {
     public void run() {
         while (!watchKeys.isEmpty()) {
             try {
-                Observable.just(watchService.take()).filter(Objects::nonNull)
+                Observable.just(watchService.take())
+                        .filter(Objects::nonNull)
                         .map(this::update)
                         .flatMapIterable(event -> event)
                         .subscribe(event -> events.add(event));
@@ -44,49 +45,54 @@ public class FileWatcher implements Runnable {
     }
 
     public void addToWatched(Path path) {
-        if (Files.isDirectory(path)) {
-            registerToWatcher(path);
-            for (Path subDir : NodeUtils.getAllSubDirectories(path)) {
-                addToWatched(subDir);
-            }
-        } else {
-            log.info("New file found: " + path);
+        registerToWatcher(path);
+        for (Path subDir : NodeUtils.getAllSubDirectories(path)) {
+            addToWatched(subDir);
         }
     }
 
     private List<Event> update(WatchKey key) {
         List<Event> events = new LinkedList<>();
-        for (WatchEvent<?> event : key.pollEvents()) {
+        Queue<WatchEvent<?>> events1 = new LinkedList<>(key.pollEvents());
+
+        for (WatchEvent<?> event : events1) {
             String fileName = ((WatchEvent<Path>) event).context().getFileName().toString();
             Path path = watchKeys.get(key).resolve(fileName);
 
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
                 events.add(new Event(path, EventType.CREATE));
                 addToWatched(path);
-                addToTree(path);
+                addToParentDirectory(path);
             }
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
                 events.add(new Event(path, EventType.DELETE));
-                events.addAll(removeBranch(path)
+                events.addAll(removeBranchFromTree(path)
                         .map(element -> new Event(element, EventType.DELETE))
                         .collect(Collectors.toList()));
             }
         }
+
         if (!key.reset()) {
             watchKeys.remove(key);
         }
         return events;
     }
 
-    private void addToTree(Path path) {
+    private void addToParentDirectory(Path path) {
         Optional<Node<Path>> parent = tree.asStream().filter(node -> node.getPayload().equals(path.getParent())).findFirst();
-        parent.ifPresent(node -> node.addChild(NodeUtils.createPathTree(path)));
+        if (parent.isPresent()) {
+            parent.get().addChild(NodeUtils.createPathTree(path));
+        } else if (tree.getRoot().getPayload().equals(path.getParent())) {
+            tree.getRoot().addChild(NodeUtils.createPathTree(path));
+        }
     }
 
-    private Stream<Path> removeBranch(Path path) {
+    private Stream<Path> removeBranchFromTree(Path path) {
         Optional<Node<Path>> toRemove = tree.asStream().filter(element -> element.getPayload().equals(path)).findFirst();
         Optional<Node<Path>> parent = tree.asStream().filter(element -> element.getPayload().equals(path.getParent())).findFirst();
-
+        if (!toRemove.isPresent()) {
+            return Stream.empty();
+        }
         if (parent.isPresent()) {
             parent.get().removeChild(toRemove.get());
         } else if (tree.getRoot().getChildren().contains(toRemove.get())) {
@@ -97,9 +103,6 @@ public class FileWatcher implements Runnable {
     }
 
     private void registerToWatcher(Path dir) {
-        if (watchKeys.values().contains(dir)) {
-            return;
-        }
         try {
             WatchKey key = dir.register(watchService, new WatchEvent.Kind[]{StandardWatchEventKinds.ENTRY_CREATE,
                     StandardWatchEventKinds.ENTRY_DELETE}, SensitivityWatchEventModifier.HIGH);
@@ -107,6 +110,5 @@ public class FileWatcher implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        log.info("New folder found: " + dir + ". Added to watcher registry");
     }
 }

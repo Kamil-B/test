@@ -46,6 +46,6 @@ public class TopicController {
 
     @Scheduled(fixedDelay = 1000)
     public void update(){
-        observable.subscribe(element -> template.convertAndSend("/topic/file", new EventMessage(element.getPath().toString(), element.getEvent())));
+        //observable.subscribe(element -> template.convertAndSend("/topic/file", new EventMessage(element.getPath().toString(), element.getEvent())));
     }
 }

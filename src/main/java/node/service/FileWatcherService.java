@@ -1,9 +1,13 @@
 package node.service;
 
 import io.reactivex.Observable;
+import io.reactivex.observers.DisposableObserver;
 import lombok.extern.slf4j.Slf4j;
 import node.model.Event;
+import node.model.EventMessage;
 import node.utils.FileWatcher;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -20,6 +24,9 @@ import java.util.concurrent.Future;
 @Service
 public class FileWatcherService {
 
+    @Autowired
+    private SimpMessagingTemplate template;
+
     private Queue<Event> events;
     private Future future;
     private FileWatcher fileWatcher;
@@ -27,12 +34,46 @@ public class FileWatcherService {
 
     public FileWatcherService() {
         this.events = new ConcurrentLinkedQueue<>();
-        this.observable = Observable.fromIterable(events).doAfterNext(event ->
+        this.observable = Observable.create(emitter -> {
+            try {
+                for (Event event : events) {
+                    log.info("sending event: " + event);
+                    emitter.onNext(event);
+                    events.remove(event);
+                }
+            } catch (Exception e) {
+                emitter.onError(e);
+            }
+            if (emitter.isDisposed()) {
+                emitter.onComplete();
+            }
+        });
+
+        observable.subscribeWith(new DisposableObserver<Event>() {
+            @Override
+            public void onNext(Event event) {
+                template.convertAndSend("/topic/file", new EventMessage(event.getPath().toString(), event.getEvent()));
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                log.info(throwable.getMessage());
+            }
+
+            @Override
+            public void onComplete() {
+                log.info("stream completed");
+            }
+        });
+
+                /*.subscribe(event ->
+                template.convertAndSend("/topic/file", new EventMessage(event.getPath().toString(), event.getEvent())));*/
+/*                Observable.fromIterable(events).doAfterNext(event ->
                 {
                     log.info("Event occurred: " + event.toString());
                     events.remove(event);
                 }
-        );
+        );*/
     }
 
     // Autoclosable

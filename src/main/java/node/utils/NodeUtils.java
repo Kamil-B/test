@@ -26,8 +26,8 @@ public class NodeUtils {
 
     private static List<Path> getChildren(Path path) {
         try {
-            if(!Files.exists(path.getParent()))
-            Files.createDirectories(path.getParent());
+            if (!Files.exists(path.getParent()))
+                Files.createDirectories(path.getParent());
         } catch (IOException e) {
             e.printStackTrace();
         }

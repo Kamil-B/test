@@ -33,8 +33,7 @@ public class FileWatcher implements Runnable {
     public void run() {
         while (!watchKeys.isEmpty()) {
             try {
-                Observable.just(watchService.take())
-                        .filter(Objects::nonNull)
+                Observable.fromArray(watchService.take())
                         .map(this::update)
                         .flatMapIterable(event -> event)
                         .subscribe(event -> events.add(event));
@@ -46,8 +45,10 @@ public class FileWatcher implements Runnable {
 
     public void addToWatched(Path path) {
         registerToWatcher(path);
-        for (Path subDir : NodeUtils.getAllSubDirectories(path)) {
-            addToWatched(subDir);
+        if (Files.isDirectory(path)) {
+            for (Path subDir : NodeUtils.getAllSubDirectories(path)) {
+                addToWatched(subDir);
+            }
         }
     }
 
@@ -61,7 +62,9 @@ public class FileWatcher implements Runnable {
 
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
                 events.add(new Event(path, EventType.CREATE));
-                addToWatched(path);
+                if (Files.isDirectory(path)) {
+                    addToWatched(path);
+                }
                 addToParentDirectory(path);
             }
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {

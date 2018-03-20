@@ -12,10 +12,10 @@ import java.util.stream.Collectors;
 
 public class NodeUtils {
 
-    public static Node<Path> createPathTree(Path path) {
-/*       if (!Files.exists(path)) {
+    public static Node<Path> createNodeTree(Path path) {
+        if (!Files.exists(path)) {
             throw new IllegalArgumentException("file does not exist");
-        }*/
+        }
         return new NodeImpl<>(path, convertFilesToNodes(getChildren(path)));
     }
 
@@ -25,12 +25,6 @@ public class NodeUtils {
     }
 
     private static List<Path> getChildren(Path path) {
-        try {
-            if(!Files.exists(path.getParent()))
-            Files.createDirectories(path.getParent());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         if (!Files.isDirectory(path)) {
             return new ArrayList<>();
         }
@@ -38,6 +32,9 @@ public class NodeUtils {
     }
 
     public static List<Path> getAllSubDirectories(Path path) {
+        if (!Files.isDirectory(path)) {
+            return new ArrayList<>();
+        }
         try {
             return Files.list(path).collect(Collectors.toList());
         } catch (IOException e) {

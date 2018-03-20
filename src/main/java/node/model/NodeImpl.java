@@ -43,7 +43,6 @@ public class NodeImpl<T> implements Node<T> {
 
     @Override
     public boolean removeChild(Node<T> node) {
-        log.info("Removed: " + node.toString());
         return children.remove(node);
     }
 }

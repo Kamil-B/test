@@ -1,6 +1,7 @@
 package node.service;
 
 import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
 import lombok.extern.slf4j.Slf4j;
 import node.model.Event;
 import node.utils.FileWatcher;
@@ -12,27 +13,16 @@ import java.nio.file.Path;
 import java.nio.file.WatchService;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 @Slf4j
 @Service
 public class FileWatcherService {
 
-    private Queue<Event> events;
-    private Future future;
     private FileWatcher fileWatcher;
-    private Observable<Event> observable;
+    private PublishSubject<Event> publisher;
 
     public FileWatcherService() {
-        this.events = new ConcurrentLinkedQueue<>();
-        this.observable = Observable.fromIterable(events).doAfterNext(event ->
-                {
-                    log.info("Event occurred: " + event.toString());
-                    events.remove(event);
-                }
-        );
+        this.publisher = PublishSubject.create();
     }
 
     // Autoclosable
@@ -42,7 +32,7 @@ public class FileWatcherService {
             return Observable.empty();
         }
         addToFileWatcher(path);
-        return observable;
+        return publisher;
     }
 
     private void addToFileWatcher(Path path) {
@@ -56,9 +46,8 @@ public class FileWatcherService {
     private void startFileWatcher(Path path) {
         try {
             WatchService watchService = path.toAbsolutePath().getFileSystem().newWatchService();
-            ExecutorService executorService = Executors.newSingleThreadExecutor();
-            fileWatcher = new FileWatcher(events, watchService, path);
-            future = executorService.submit(fileWatcher);
+            fileWatcher = new FileWatcher(watchService, path, publisher);
+            new Thread(fileWatcher).start();
         } catch (IOException e) {
             log.error("Couldn't initiate service with " + path + ". " + e.getMessage());
         }

@@ -1,7 +1,7 @@
 package node.utils;
 
 import com.sun.nio.file.SensitivityWatchEventModifier;
-import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
 import lombok.extern.slf4j.Slf4j;
 import node.model.Event;
 import node.model.EventType;
@@ -18,14 +18,14 @@ public class FileWatcher implements Runnable {
 
     private WatchService watchService;
     private Map<WatchKey, Path> watchKeys;
-    private Queue<Event> events;
     private NodeTree<Path> tree;
+    private PublishSubject<Event> publisher;
 
-    public FileWatcher(Queue<Event> events, WatchService watchService, Path path) {
-        this.tree = new NodeTree<>(NodeUtils.createPathTree(path));
-        this.events = events;
+    public FileWatcher(WatchService watchService, Path path, PublishSubject<Event> publisher) {
+        this.tree = new NodeTree<>(NodeUtils.createNodeTree(path));
         this.watchService = watchService;
         this.watchKeys = new HashMap<>();
+        this.publisher = publisher;
         addToWatched(path);
     }
 
@@ -33,36 +33,42 @@ public class FileWatcher implements Runnable {
     public void run() {
         while (!watchKeys.isEmpty()) {
             try {
-                Observable.just(watchService.take())
-                        .filter(Objects::nonNull)
-                        .map(this::update)
-                        .flatMapIterable(event -> event)
-                        .subscribe(event -> events.add(event));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                update(watchService.take()).forEach(publisher::onNext);
+            } catch (Exception e) {
+                log.error("Exception while processing events: ", e);
             }
         }
     }
 
     public void addToWatched(Path path) {
-        registerToWatcher(path);
-        for (Path subDir : NodeUtils.getAllSubDirectories(path)) {
-            addToWatched(subDir);
+        if (Files.isDirectory(path)) {
+            registerToWatcher(path);
+            for (Path subDir : NodeUtils.getAllSubDirectories(path)) {
+                addToWatched(subDir);
+            }
         }
     }
 
     private List<Event> update(WatchKey key) {
-        List<Event> events = new LinkedList<>();
-        Queue<WatchEvent<?>> events1 = new LinkedList<>(key.pollEvents());
+        Queue<WatchEvent<?>> watchEvents = new LinkedList<>(key.pollEvents());
+        List<Event> events = new ArrayList<>();
 
-        for (WatchEvent<?> event : events1) {
+        while (!watchEvents.isEmpty()) {
+            WatchEvent<?> event = watchEvents.poll();
             String fileName = ((WatchEvent<Path>) event).context().getFileName().toString();
+            if (fileName.contains(".tmp")) {
+                continue;
+            }
             Path path = watchKeys.get(key).resolve(fileName);
 
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
-                events.add(new Event(path, EventType.CREATE));
-                addToWatched(path);
-                addToParentDirectory(path);
+                if (!Files.exists(path) || !Files.exists(path.getParent())) {
+                    watchEvents.add(event);
+                } else {
+                    addToWatched(path);
+                    addToParentDirectory(path);
+                    events.add(new Event(path, EventType.CREATE));
+                }
             }
             if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
                 events.add(new Event(path, EventType.DELETE));
@@ -71,7 +77,6 @@ public class FileWatcher implements Runnable {
                         .collect(Collectors.toList()));
             }
         }
-
         if (!key.reset()) {
             watchKeys.remove(key);
         }
@@ -81,9 +86,9 @@ public class FileWatcher implements Runnable {
     private void addToParentDirectory(Path path) {
         Optional<Node<Path>> parent = tree.asStream().filter(node -> node.getPayload().equals(path.getParent())).findFirst();
         if (parent.isPresent()) {
-            parent.get().addChild(NodeUtils.createPathTree(path));
+            parent.get().addChild(NodeUtils.createNodeTree(path));
         } else if (tree.getRoot().getPayload().equals(path.getParent())) {
-            tree.getRoot().addChild(NodeUtils.createPathTree(path));
+            tree.getRoot().addChild(NodeUtils.createNodeTree(path));
         }
     }
 

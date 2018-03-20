@@ -39,7 +39,7 @@ public class NodeTreeUtilsTest {
         val folder2 = new NodeImpl<Path>(fs.getPath("root/folder2"));
         val expectedNodeTree = new NodeImpl<Path>(fs.getPath("root"), Arrays.asList(folder1, folder2));
 
-        Node<Path> actualNodeTree = NodeUtils.createPathTree(root);
+        Node<Path> actualNodeTree = NodeUtils.createNodeTree(root);
         new NodeTree<>(actualNodeTree).iterator().forEachRemaining(node -> log.info(node.getPayload().toString()));
         assertThat(actualNodeTree).isEqualTo(expectedNodeTree);
     }

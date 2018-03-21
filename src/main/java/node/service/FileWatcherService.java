@@ -11,8 +11,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.WatchService;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Slf4j
 @Service
@@ -27,9 +25,9 @@ public class FileWatcherService {
 
     // Autoclosable
     public Observable<Event> startWatching(Path path) {
-        if (!Files.exists(path)) {
-            log.info("Path: " + path + " does not exist!!");
-            return Observable.empty();
+        if (!Files.exists(path) || !Files.isDirectory(path)) {
+            log.info("Path: " + path + " does not exist or is not a directory!! ");
+            return Observable.error(IllegalArgumentException::new);
         }
         addToFileWatcher(path);
         return publisher;

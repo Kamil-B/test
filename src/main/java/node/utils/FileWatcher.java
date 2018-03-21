@@ -41,22 +41,24 @@ public class FileWatcher implements Runnable {
     }
 
     public void addToWatched(Path path) {
-        if (Files.isDirectory(path)) {
-            registerToWatcher(path);
-            for (Path subDir : NodeUtils.getAllSubDirectories(path)) {
-                addToWatched(subDir);
-            }
+        if (!Files.isDirectory(path)) {
+            return;
         }
+        registerToWatcher(path);
+        for (Path subDir : NodeUtils.getChildren(path)) {
+            addToWatched(subDir);
+        }
+
     }
 
     private List<Event> update(WatchKey key) {
         Queue<WatchEvent<?>> watchEvents = new LinkedList<>(key.pollEvents());
         List<Event> events = new ArrayList<>();
-
         while (!watchEvents.isEmpty()) {
             WatchEvent<?> event = watchEvents.poll();
             String fileName = ((WatchEvent<Path>) event).context().getFileName().toString();
             if (fileName.contains(".tmp")) {
+                log.debug("Found temporary file: " + fileName + ". Ignoring.");
                 continue;
             }
             Path path = watchKeys.get(key).resolve(fileName);

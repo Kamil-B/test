@@ -1,5 +1,6 @@
 package node.utils;
 
+import lombok.extern.slf4j.Slf4j;
 import node.model.Node;
 import node.model.NodeImpl;
 
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class NodeUtils {
 
     public static Node<Path> createNodeTree(Path path) {
@@ -24,22 +26,15 @@ public class NodeUtils {
                 .collect(Collectors.toList());
     }
 
-    private static List<Path> getChildren(Path path) {
-        if (!Files.isDirectory(path)) {
-            return new ArrayList<>();
-        }
-        return getAllSubDirectories(path);
-    }
-
-    public static List<Path> getAllSubDirectories(Path path) {
-        if (!Files.isDirectory(path)) {
-            return new ArrayList<>();
-        }
-        try {
-            return Files.list(path).collect(Collectors.toList());
-        } catch (IOException e) {
-            e.printStackTrace();
+    public static List<Path> getChildren(Path path) {
+        if (Files.isDirectory(path)) {
+            try {
+                return Files.list(path).collect(Collectors.toList());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return new ArrayList<>();
     }
+
 }

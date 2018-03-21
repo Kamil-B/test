@@ -14,12 +14,13 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
-public class NodeTreeUtilsTest {
+public class NodeUtilsTest {
 
     @Test
     public void generatePathsTree_sameAsExpected() throws IOException {
@@ -41,6 +42,21 @@ public class NodeTreeUtilsTest {
 
         Node<Path> actualNodeTree = NodeUtils.createNodeTree(root);
         new NodeTree<>(actualNodeTree).iterator().forEachRemaining(node -> log.info(node.getPayload().toString()));
+        assertThat(actualNodeTree).isEqualTo(expectedNodeTree);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void generatePathsTreeWithNotExistedPath_returnIllegalArgumentException() {
+        NodeUtils.createNodeTree(Paths.get("C:\\path\\does\\not\\exist"));
+    }
+
+    @Test
+    public void generatePathsTreeWithTxtFile_returnOneNodeTree() throws IOException {
+        FileSystem fs = Jimfs.newFileSystem(Configuration.windows());
+
+        val expectedNodeTree = new NodeImpl<Path>(fs.getPath("test.txt"));
+        Node<Path> actualNodeTree = NodeUtils.createNodeTree(Files.createFile(fs.getPath("test.txt")));
+
         assertThat(actualNodeTree).isEqualTo(expectedNodeTree);
     }
 }

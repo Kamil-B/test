@@ -24,45 +24,69 @@ public class FileWatcherServiceTest {
 
     @Test
     public void addNotExistedPath_returnEmpty() {
+        List<Event> expectedEvents = new ArrayList<>();
         FileWatcherService fileWatcher = new FileWatcherService();
         Observable<Event> observable = fileWatcher.startWatching(Paths.get("C:\\path\\does\\not\\exist"));
 
-        Iterable<Event> items = observable.blockingIterable();
-        assertThat(items.iterator()).isEmpty();
+        observable.subscribe(expectedEvents::add);
+        assertThat(expectedEvents).isEmpty();
+    }
+
+
+    @Test
+    public void addingTwoPathsToFileWatcher_returnSameObservable() throws IOException {
+        FileSystem fs = Jimfs.newFileSystem(Configuration.windows());
+        Path path1 = Files.createDirectory(fs.getPath("path1"));
+        Path path2 = Files.createDirectory(fs.getPath("path2"));
+
+        FileWatcherService fileWatcher = new FileWatcherService();
+        Observable<Event> observable1 = fileWatcher.startWatching(path1);
+        Observable<Event> observable2 = fileWatcher.startWatching(path2);
+        assertThat(observable1).isSameAs(observable2);
     }
 
     @Test
-    public void addNewPathsToWatchedDirectory_returnNewEvents() throws IOException, InterruptedException {
+    public void addNewPathsToWatchedDirectory_returnCreateEvents() throws IOException, InterruptedException {
+        List<Event> expectedEvents = new ArrayList<>();
+        List<Event> actualEvents = new ArrayList<>();
         FileSystem fs = Jimfs.newFileSystem(Configuration.windows());
 
         FileWatcherService fileWatcher = new FileWatcherService();
-        Observable<Event> observable = fileWatcher.startWatching(Files.createDirectory(fs.getPath("root")));
+        fileWatcher.startWatching(Files.createDirectory(fs.getPath("root"))).subscribe(actualEvents::add);
 
-        List<Event> expectedEvents = new ArrayList<>();
         expectedEvents.add(new Event(Files.createDirectory(fs.getPath("root/folder1")), EventType.CREATE));
         expectedEvents.add(new Event(Files.createDirectory(fs.getPath("root/folder2")), EventType.CREATE));
 
-        Thread.sleep(5000); // wait for fileWatcher to notice changes
+        Thread.sleep(7000); // wait for fileWatcher to notice changes
 
-        Iterable<Event> items = observable.blockingIterable();
-        assertThat(items.iterator()).containsAll(expectedEvents);
+        assertThat(actualEvents).containsAll(expectedEvents);
     }
 
     @Test
-    public void deleteFilesInWatchedDirectory_returnNewEvents() throws IOException, InterruptedException {
+    public void deleteFilesInWatchedDirectory_returnDeleteEvents() throws IOException, InterruptedException {
+        List<Event> expectedEvents = new ArrayList<>();
+        List<Event> actualEvents = new ArrayList<>();
         FileSystem fs = Jimfs.newFileSystem(Configuration.windows());
         Path root = Files.createDirectory(fs.getPath("root"));
         Files.createDirectory(fs.getPath("root/folder1"));
-        List<Event> expectedEvents = new ArrayList<>();
-        expectedEvents.add(new Event(fs.getPath("root/folder1"), EventType.DELETE));
 
         FileWatcherService fileWatcher = new FileWatcherService();
-        Observable<Event> observable = fileWatcher.startWatching(root);
+        fileWatcher.startWatching(root).subscribe(actualEvents::add);
+
+        expectedEvents.add(new Event(fs.getPath("root/folder1"), EventType.DELETE));
+
 
         Files.delete(fs.getPath("root/folder1"));
-        Thread.sleep(5000); // wait for fileWatcher to notice changes
+        Thread.sleep(7000); // wait for fileWatcher to notice changes
 
-        Iterable<Event> items = observable.blockingIterable();
-        assertThat(items.iterator()).containsAll(expectedEvents);
+        assertThat(actualEvents).containsAll(expectedEvents);
+    }
+
+    @Test
+    public void addRegularFileToWatcher_returnEmpty() throws IOException {
+        FileSystem fs = Jimfs.newFileSystem(Configuration.windows());
+        FileWatcherService fileWatcher = new FileWatcherService();
+        Observable<Event> observable = fileWatcher.startWatching(Files.createFile(fs.getPath("test.txt")));
+        //assertThat()
     }
 }

@@ -10,6 +10,7 @@ import node.model.Node;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,8 +35,8 @@ public class FileWatcher implements Runnable {
         while (!watchKeys.isEmpty()) {
             try {
                 update(watchService.take()).forEach(publisher::onNext);
-            } catch (Exception e) {
-                log.error("Exception while processing events: ", e);
+            } catch (InterruptedException e) {
+                log.warn("Exception while processing events: ", e);
             }
         }
     }
@@ -48,7 +49,6 @@ public class FileWatcher implements Runnable {
         for (Path subDir : NodeUtils.getChildren(path)) {
             addToWatched(subDir);
         }
-
     }
 
     private List<Event> update(WatchKey key) {
@@ -115,7 +115,7 @@ public class FileWatcher implements Runnable {
                     StandardWatchEventKinds.ENTRY_DELETE}, SensitivityWatchEventModifier.HIGH);
             watchKeys.put(key, dir);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.warn("Couldn't register directory: " + dir + " to file watcher");
         }
     }
 }

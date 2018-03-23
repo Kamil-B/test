@@ -4,12 +4,16 @@ import io.reactivex.Observable;
 import io.reactivex.subjects.PublishSubject;
 import lombok.extern.slf4j.Slf4j;
 import node.model.Event;
+import node.model.PathActionResult;
 import node.utils.FileWatcher;
+import node.utils.PathUtils;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.WatchService;
 
 @Slf4j
@@ -31,6 +35,26 @@ public class FileWatcherService {
         }
         addToFileWatcher(path);
         return publisher;
+    }
+
+    public PathActionResult generateActionResult(String action , String path){
+        if (action.equals("create")) {
+            log.info("Creating file: " + path);
+            return buildPathActionResult(action, path);
+        }
+        if (action.equals("delete")) {
+            log.info("Removing file: " + path);
+            return buildPathActionResult(action, path);
+        }
+        throw new UnsupportedOperationException("Unsupported operation. Allowed: CREATE and DELETE.");
+    }
+
+    private PathActionResult buildPathActionResult(String action, String path) {
+        return PathActionResult.builder()
+                .action(action)
+                .path(path)
+                .result(PathUtils.createFile(Paths.get(path)))
+                .build();
     }
 
     private void addToFileWatcher(Path path) {

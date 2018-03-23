@@ -13,8 +13,13 @@ import java.util.Map;
 @Service
 @Slf4j
 public class DisposablesService {
-    private Map<String, Disposable> disposables = new HashMap<>();
-    private PublishSubject<String> publisher = PublishSubject.create();
+    private Map<String, Disposable> disposables;
+    private PublishSubject<String> publisher;
+
+    public DisposablesService() {
+        this.disposables = new HashMap<>();
+        this.publisher = PublishSubject.create();
+    }
 
     @Bean
     public StompDisconnectEventListener stompDisconnectEventListener() {

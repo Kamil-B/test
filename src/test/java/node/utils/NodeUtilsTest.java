@@ -1,4 +1,4 @@
-package node;
+package node.utils;
 
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
@@ -6,8 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import node.model.Node;
 import node.model.NodeImpl;
-import node.utils.NodeTree;
-import node.utils.NodeUtils;
 import org.junit.Test;
 
 import java.io.IOException;

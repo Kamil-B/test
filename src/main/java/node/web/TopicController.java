@@ -12,16 +12,16 @@ import node.service.FileWatcherService;
 import node.utils.NodeTree;
 import node.utils.NodeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Controller
@@ -36,20 +36,19 @@ public class TopicController {
     private SimpMessagingTemplate template;
 
     private Observable<Event> observable;
-    private String path;
 
     @MessageMapping("/path")
-    public void startStreaming(SubscriptionMessage message, SimpMessageHeaderAccessor headerAccessor) {
-
-        path = message.getPath();
+    public void sendUpdates(SubscriptionMessage message, SimpMessageHeaderAccessor header) {
+        log.info("path");
         observable = fileWatcherService.startWatching(Paths.get(message.getPath()));
+        Disposable subscriber = observable.subscribe(element ->
+                template.convertAndSend("/topic/file", new EventMessage(element.getPath().toString(), element.getEvent())));
+        disposablesService.put(header.getSessionId(), subscriber);
+    }
 
-        Disposable subscriber = observable.subscribe(element -> template.convertAndSend("/topic/file", new EventMessage(element.getPath().toString(), element.getEvent())));
-        disposablesService.put(headerAccessor.getSessionId(), subscriber);
-        }
-
-    @SubscribeMapping("/tree")
-    public Stream<EventMessage> sendTree() {
+    @SubscribeMapping("/tree/{path}")
+    public Stream<EventMessage> sendActualPaths(@DestinationVariable String path) {
+        log.info("tree");
         return new NodeTree<>(NodeUtils.createNodeTree(Paths.get(path)))
                 .asStream()
                 .map(element -> new EventMessage(element.getPayload().toString(), EventType.CREATE));

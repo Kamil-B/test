@@ -1,10 +1,9 @@
-package node;
+package node.utils;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import node.model.Node;
 import node.model.NodeImpl;
-import node.utils.NodeTree;
 import org.junit.Before;
 import org.junit.Test;
 

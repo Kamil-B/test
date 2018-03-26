@@ -9,7 +9,7 @@ import java.nio.file.Path;
 @Slf4j
 public class PathUtils {
 
-    public static boolean createFile(Path path) {
+    public static Boolean createFile(Path path) {
         try {
             Files.createFile(path);
             return true;
@@ -21,7 +21,8 @@ public class PathUtils {
 
     public static boolean deleteFile(Path path) {
         try {
-            return Files.deleteIfExists(path);
+            Files.delete(path);
+            return true;
         } catch (IOException e) {
             log.error("Could not delete file: " + path, e);
             return false;

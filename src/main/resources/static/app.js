@@ -54,11 +54,9 @@ function sendPath() {
         'path': $("#path").val()
     }));
 
-    stompClient.subscribe('/app/tree', function (message) {
+    stompClient.subscribe('/app/tree/' + $("#path").val().replace(/\\/g, '\\\\'), function (message) {
         var events = JSON.parse(message.body);
-        console.log(events);
         for (var i = 0; i < events.length; i++) {
-            console.log(events[i]);
             addOrRemove(events[i]);
         }
         showGreeting();

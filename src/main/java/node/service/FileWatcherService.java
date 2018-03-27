@@ -38,11 +38,9 @@ public class FileWatcherService {
 
     public PathActionResult performAction(String action, String path) {
         if (action.equals("create")) {
-            log.info("Creating file: " + path);
             return buildPathActionResult(path, action, PathUtils.createFile(Paths.get(path)));
         }
         if (action.equals("delete")) {
-            log.info("Removing file: " + path);
             return buildPathActionResult(path, action, PathUtils.deleteFile(Paths.get(path)));
         }
         throw new UnsupportedOperationException("Unsupported operation. Allowed: CREATE and DELETE.");

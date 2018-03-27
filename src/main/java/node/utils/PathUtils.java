@@ -5,6 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class PathUtils {
@@ -27,5 +30,16 @@ public class PathUtils {
             log.error("Could not delete file: " + path, e);
             return false;
         }
+    }
+
+    public static List<Path> getSubdirectories(Path path) {
+        if (Files.isDirectory(path)) {
+            try {
+                return Files.list(path).collect(Collectors.toList());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return new ArrayList<>();
     }
 }

@@ -1,7 +1,9 @@
 package node.web;
 
+import io.reactivex.Observable;
 import lombok.extern.slf4j.Slf4j;
 import node.model.EventMessage;
+import node.model.EventType;
 import node.model.SubscriptionMessage;
 import org.junit.After;
 import org.junit.Before;
@@ -15,7 +17,9 @@ import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.Transport;
@@ -27,7 +31,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -42,59 +49,73 @@ public class TopicControllerTest {
     private String WEBSOCKET_URI;
     private final String WEBSOCKET_TOPIC = "/topic/file";
     private final String WEBSOCKET_APP = "/app/path";
-    private final String WEBSOCKET_TREE = "/app/tree";
+    private final String WEBSOCKET_TREE = "/app/tree/";
     private BlockingQueue<EventMessage> events;
-    private CompletableFuture<EventMessage> completableFuture;
+    private FrameHandler frameHandler = new FrameHandler();
 
     @Before
     public void setup() {
         WEBSOCKET_URI = "ws://localhost:" + String.valueOf(port) + "/websocket";
-        completableFuture = new CompletableFuture<>();
         events = new LinkedBlockingDeque<>();
     }
 
     @After
     public void cleanup() throws IOException {
-        Files.deleteIfExists(Paths.get("src/test/resources/test1.txt"));
-        Files.deleteIfExists(Paths.get("src/test/resources/test2.txt"));
+        Files.deleteIfExists(Paths.get("src\\test\\resources\\test.txt"));
+        Files.deleteIfExists(Paths.get("src\\test\\resources\\existed.txt"));
     }
 
     @Test
     public void subscribeToTopic_receiveMessageFromServer() throws InterruptedException, ExecutionException, TimeoutException, IOException {
-
+        log.info(Files.createFile(Paths.get("src\\test\\resources\\existed.txt")).toString());
+        EventMessage expectedMessage = new EventMessage("src\\test\\resources\\test.txt", EventType.CREATE);
         WebSocketStompClient stompClient = new WebSocketStompClient(new SockJsClient(createTransportClient()));
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
+        WebSocketClient client = new StandardWebSocketClient();
+        client.doHandshake(new TextWebSocketHandler(), WEBSOCKET_URI);
+
         StompSession stompSession = stompClient.connect(WEBSOCKET_URI, new StompSessionHandlerAdapter() {
         }).get(5, SECONDS);
-        stompSession.send(WEBSOCKET_APP, new SubscriptionMessage("src/test/resources", "test"));
-        stompSession.subscribe(WEBSOCKET_TREE + "src\\\\test\\\\resources", new EventMessageStompFrameHandler());
-        stompSession.subscribe(WEBSOCKET_TOPIC, new EventMessageStompFrameHandler());
 
-        Files.createFile(Paths.get("src/test/resources/test1.txt"));
-        Files.createFile(Paths.get("src/test/resources/test2.txt"));
+        stompSession.send(WEBSOCKET_APP, new SubscriptionMessage("src\\test\\resources", "test"));
+        stompSession.subscribe(WEBSOCKET_TREE + "C:\\\\git\\\\tree_test2", frameHandler);
+        stompSession.subscribe(WEBSOCKET_TOPIC, frameHandler);
+        Thread.sleep(100);
+        Files.createFile(Paths.get("src\\test\\resources\\test.txt"));
 
-        Thread.sleep(15000);
-        //assertThat(events.poll(10, SECONDS));
+        List<EventMessage> actualMessages = new ArrayList<>();
+        Thread.sleep(1000);
+        events.drainTo(actualMessages);
+        stompSession.disconnect();
+
+        actualMessages.forEach(event -> log.info(event.toString()));
+
+        //assertThat(actualMessage).isNotNull();
+        //assertThat(actualMessage).isEqualTo(expectedMessage);
     }
 
     private List<Transport> createTransportClient() {
-        List<Transport> transports = new ArrayList<>(3);
+        List<Transport> transports = new ArrayList<>(1);
         transports.add(new WebSocketTransport(new StandardWebSocketClient()));
         return transports;
     }
 
-    private class EventMessageStompFrameHandler implements StompFrameHandler {
+    private class FrameHandler implements StompFrameHandler {
 
         @Override
         public Type getPayloadType(StompHeaders stompHeaders) {
-            log.info(stompHeaders.toString());
             return EventMessage.class;
         }
 
         @Override
         public void handleFrame(StompHeaders stompHeaders, Object o) {
-            log.info((o).toString());
-            events.add((EventMessage) o);
+            log.info("adding:" + o.toString());
+            Observable.just((EventMessage) o).subscribe(element -> events.add(element));
+/*            try {
+                events.offer((EventMessage) o, 1, SECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }*/
         }
     }
 }

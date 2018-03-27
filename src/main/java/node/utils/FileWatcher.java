@@ -10,7 +10,6 @@ import node.model.Node;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,7 +45,7 @@ public class FileWatcher implements Runnable {
             return;
         }
         registerToWatcher(path);
-        for (Path subDir : NodeUtils.getChildren(path)) {
+        for (Path subDir : PathUtils.getSubdirectories(path)) {
             addToWatched(subDir);
         }
     }

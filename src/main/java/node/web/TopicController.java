@@ -39,7 +39,7 @@ public class TopicController {
 
     @MessageMapping("/path")
     public void sendUpdates(SubscriptionMessage message, SimpMessageHeaderAccessor header) {
-        log.info("path");
+
         observable = fileWatcherService.startWatching(Paths.get(message.getPath()));
         Disposable subscriber = observable.subscribe(element ->
                 template.convertAndSend("/topic/file", new EventMessage(element.getPath().toString(), element.getEvent())));
@@ -48,10 +48,9 @@ public class TopicController {
 
     @SubscribeMapping("/tree/{path}")
     public Stream<EventMessage> sendActualPaths(@DestinationVariable String path) {
-        log.info("tree");
+        log.info("WESZLO !!!!");
         return new NodeTree<>(NodeUtils.createNodeTree(Paths.get(path)))
                 .asStream()
                 .map(element -> new EventMessage(element.getPayload().toString(), EventType.CREATE));
-
     }
 }

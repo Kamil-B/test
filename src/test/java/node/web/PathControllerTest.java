@@ -1,9 +1,8 @@
 package node.web;
 
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,11 +12,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.io.IOException;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -41,6 +40,8 @@ public class PathControllerTest {
                 .andExpect(jsonPath("$.path").value(toCreate))
                 .andExpect(jsonPath("$.action").value("create"))
                 .andExpect(jsonPath("$.result").value("true"));
+
+        assertThat(Paths.get(toCreate)).exists();
     }
 
     @Test
@@ -55,6 +56,15 @@ public class PathControllerTest {
                 .andExpect(jsonPath("$.path").value(file.toAbsolutePath().toString()))
                 .andExpect(jsonPath("$.action").value("delete"))
                 .andExpect(jsonPath("$.result").value("true"));
+
+        assertThat(file).doesNotExist();
+    }
+
+    @Test
+    public void givenPathURI_whenUnsupportedAction_thenGetException() throws Exception {
+        this.mockMvc.perform(MockMvcRequestBuilders.get("/path/update")
+                .param("path", "src/test/resources/test.txt"))
+        .andExpect(status().isInternalServerError());
     }
 
     @After

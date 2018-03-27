@@ -4,10 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import node.model.Node;
 import node.model.NodeImpl;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,23 +16,11 @@ public class NodeUtils {
         if (!Files.exists(path)) {
             throw new IllegalArgumentException("file does not exist");
         }
-        return new NodeImpl<>(path, convertFilesToNodes(getChildren(path)));
+        return new NodeImpl<>(path, convertFilesToNodes(PathUtils.getSubdirectories(path)));
     }
 
     private static List<Node<Path>> convertFilesToNodes(List<Path> names) {
-        return names.stream().map(name -> new NodeImpl<>(name, convertFilesToNodes(getChildren(name))))
+        return names.stream().map(name -> new NodeImpl<>(name, convertFilesToNodes(PathUtils.getSubdirectories(name))))
                 .collect(Collectors.toList());
     }
-
-    public static List<Path> getChildren(Path path) {
-        if (Files.isDirectory(path)) {
-            try {
-                return Files.list(path).collect(Collectors.toList());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return new ArrayList<>();
-    }
-
 }

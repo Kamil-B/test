@@ -4,21 +4,23 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import io.reactivex.Observable;
 import io.reactivex.observers.TestObserver;
+import io.reactivex.subjects.PublishSubject;
 import lombok.extern.slf4j.Slf4j;
 import node.model.Event;
 import node.model.EventType;
 import node.service.FileWatcherService;
+import node.utils.FileWatcher;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,7 +31,7 @@ public class FileWatcherServiceTest {
 
     @After
     public void cleanUp() throws IOException {
-       if(fs != null) fs.close();
+        if (fs != null) fs.close();
     }
 
     @Test
@@ -93,4 +95,21 @@ public class FileWatcherServiceTest {
         assertThat(actualEvents).containsAll(expectedEvents);
     }
 
+    @Test
+    public void givenTmpFile_whenCreate_thenIgnore() throws IOException, InterruptedException {
+        List<Event> actualEvents = new ArrayList<>();
+        fs = Jimfs.newFileSystem(Configuration.windows());
+        Path root = Files.createDirectory(fs.getPath("root"));
+
+        FileWatcherService fileWatcher = new FileWatcherService();
+        fileWatcher.startWatching(root).subscribe(actualEvents::add);
+
+        Files.createFile(fs.getPath("root/file.txt"));
+        Files.createFile(fs.getPath("root/temp.tmp"));
+        Event expectedEvent = new Event(fs.getPath("root/file.txt"), EventType.CREATE);
+
+        Thread.sleep(7000); // wait for fileWatcher to notice changes
+        assertThat(actualEvents).hasSize(1);
+        assertThat(actualEvents).contains(expectedEvent);
+    }
 }

@@ -10,6 +10,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -71,6 +72,12 @@ public class NodeTreeTest {
         Stream<Node<String>> actualStream = helper.asStream();
         Stream<Node<String>> expectedStream = expectedChildren.stream();
         assertThat(actualStream.collect(Collectors.toList())).containsAll(expectedStream.collect(Collectors.toList()));
+    }
+
+    @Test(expected = NoSuchElementException.class)
+    public void givenEmptyTree_whenGetElement_ReturnNoSuchElementException(){
+        val nodeTree = new NodeTree<>(new NodeImpl<>("path", new ArrayList<>()));
+        nodeTree.iterator().next();
     }
 
 }

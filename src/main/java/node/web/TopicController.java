@@ -48,7 +48,6 @@ public class TopicController {
 
     @SubscribeMapping("/tree/{path}")
     public Stream<EventMessage> sendActualPaths(@DestinationVariable String path) {
-        log.info("WESZLO !!!!");
         return new NodeTree<>(NodeUtils.createNodeTree(Paths.get(path)))
                 .asStream()
                 .map(element -> new EventMessage(element.getPayload().toString(), EventType.CREATE));

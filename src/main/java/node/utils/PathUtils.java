@@ -33,13 +33,13 @@ public class PathUtils {
     }
 
     public static List<Path> getSubdirectories(Path path) {
-        if (Files.isDirectory(path)) {
+       // if (Files.isDirectory(path)) {
             try {
                 return Files.list(path).collect(Collectors.toList());
             } catch (IOException e) {
-                e.printStackTrace();
+                log.warn("Couldn't get subdirectories for file: " + path, e);
             }
-        }
+      //  }
         return new ArrayList<>();
     }
 }

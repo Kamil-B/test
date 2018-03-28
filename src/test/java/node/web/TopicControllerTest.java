@@ -36,7 +36,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeoutException;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -67,7 +69,6 @@ public class TopicControllerTest {
 
     @Test
     public void subscribeToTopic_receiveMessageFromServer() throws InterruptedException, ExecutionException, TimeoutException, IOException {
-        log.info(Files.createFile(Paths.get("src\\test\\resources\\existed.txt")).toString());
         EventMessage expectedMessage = new EventMessage("src\\test\\resources\\test.txt", EventType.CREATE);
         WebSocketStompClient stompClient = new WebSocketStompClient(new SockJsClient(createTransportClient()));
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
@@ -83,19 +84,15 @@ public class TopicControllerTest {
         Thread.sleep(100);
         Files.createFile(Paths.get("src\\test\\resources\\test.txt"));
 
-        List<EventMessage> actualMessages = new ArrayList<>();
-        Thread.sleep(1000);
-        events.drainTo(actualMessages);
+        EventMessage actualMessage = events.poll(100, MILLISECONDS);
         stompSession.disconnect();
 
-        actualMessages.forEach(event -> log.info(event.toString()));
-
-        //assertThat(actualMessage).isNotNull();
-        //assertThat(actualMessage).isEqualTo(expectedMessage);
+        assertThat(actualMessage).isNotNull();
+        assertThat(actualMessage).isEqualTo(expectedMessage);
     }
 
     private List<Transport> createTransportClient() {
-        List<Transport> transports = new ArrayList<>(1);
+        List<Transport> transports = new ArrayList<>(2);
         transports.add(new WebSocketTransport(new StandardWebSocketClient()));
         return transports;
     }
@@ -109,13 +106,7 @@ public class TopicControllerTest {
 
         @Override
         public void handleFrame(StompHeaders stompHeaders, Object o) {
-            log.info("adding:" + o.toString());
-            Observable.just((EventMessage) o).subscribe(element -> events.add(element));
-/*            try {
-                events.offer((EventMessage) o, 1, SECONDS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }*/
+            events.offer((EventMessage) o);
         }
     }
 }

@@ -4,18 +4,19 @@ import lombok.extern.slf4j.Slf4j;
 import node.model.Node;
 import node.model.NodeImpl;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
-public class NodeUtils {
+public class NodePathUtils {
+
+    public static Stream<Path> getNodeTreePaths(Path path) {
+        return new NodeTree<>(createNodeTree(path)).asStream().map(Node::getPayload);
+    }
 
     public static Node<Path> createNodeTree(Path path) {
-        if (!Files.exists(path)) {
-            throw new IllegalArgumentException("file does not exist");
-        }
         return new NodeImpl<>(path, convertFilesToNodes(PathUtils.getSubdirectories(path)));
     }
 

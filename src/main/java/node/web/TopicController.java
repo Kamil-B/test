@@ -9,8 +9,7 @@ import node.model.EventType;
 import node.model.SubscriptionMessage;
 import node.service.DisposablesService;
 import node.service.FileWatcherService;
-import node.utils.NodeTree;
-import node.utils.NodeUtils;
+import node.utils.NodePathUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -18,8 +17,6 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.nio.file.Paths;
 import java.util.stream.Stream;
@@ -48,8 +45,7 @@ public class TopicController {
 
     @SubscribeMapping("/tree/{path}")
     public Stream<EventMessage> sendActualPaths(@DestinationVariable String path) {
-        return new NodeTree<>(NodeUtils.createNodeTree(Paths.get(path)))
-                .asStream()
-                .map(element -> new EventMessage(element.getPayload().toString(), EventType.CREATE));
+        return NodePathUtils.getNodeTreePaths(Paths.get(path))
+                .map(element -> new EventMessage(element.toString(), EventType.CREATE));
     }
 }

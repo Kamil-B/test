@@ -12,13 +12,12 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
-public class NodeUtilsTest {
+public class NodePathUtilsTest {
 
     @Test
     public void generatePathsTree_sameAsExpected() throws IOException {
@@ -38,14 +37,9 @@ public class NodeUtilsTest {
         val folder2 = new NodeImpl<Path>(fs.getPath("root/folder2"));
         val expectedNodeTree = new NodeImpl<Path>(fs.getPath("root"), Arrays.asList(folder1, folder2));
 
-        Node<Path> actualNodeTree = NodeUtils.createNodeTree(root);
+        Node<Path> actualNodeTree = NodePathUtils.createNodeTree(root);
         new NodeTree<>(actualNodeTree).iterator().forEachRemaining(node -> log.info(node.getPayload().toString()));
         assertThat(actualNodeTree).isEqualTo(expectedNodeTree);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void generatePathsTreeWithNotExistedPath_returnIllegalArgumentException() {
-        NodeUtils.createNodeTree(Paths.get("C:\\path\\does\\not\\exist"));
     }
 
     @Test
@@ -53,7 +47,7 @@ public class NodeUtilsTest {
         FileSystem fs = Jimfs.newFileSystem(Configuration.windows());
 
         val expectedNodeTree = new NodeImpl<Path>(fs.getPath("test.txt"));
-        Node<Path> actualNodeTree = NodeUtils.createNodeTree(Files.createFile(fs.getPath("test.txt")));
+        Node<Path> actualNodeTree = NodePathUtils.createNodeTree(Files.createFile(fs.getPath("test.txt")));
 
         assertThat(actualNodeTree).isEqualTo(expectedNodeTree);
     }

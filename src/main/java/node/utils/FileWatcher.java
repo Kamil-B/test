@@ -1,7 +1,10 @@
 package node.utils;
 
-import com.sun.nio.file.SensitivityWatchEventModifier;
+import io.reactivex.Observable;
 import io.reactivex.subjects.PublishSubject;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import node.model.Event;
 import node.model.EventType;
@@ -22,7 +25,7 @@ public class FileWatcher implements Runnable {
     private PublishSubject<Event> publisher;
 
     public FileWatcher(WatchService watchService, Path path, PublishSubject<Event> publisher) {
-        this.tree = new NodeTree<>(NodeUtils.createNodeTree(path));
+        this.tree = new NodeTree<>(NodePathUtils.createNodeTree(path));
         this.watchService = watchService;
         this.watchKeys = new HashMap<>();
         this.publisher = publisher;
@@ -31,9 +34,23 @@ public class FileWatcher implements Runnable {
 
     @Override
     public void run() {
-        while (!watchKeys.isEmpty()) {
+        while (true) {
             try {
-                update(watchService.take()).forEach(publisher::onNext);
+                WatchKey key = watchService.take();
+                List<WatchEvent<?>> events = new LinkedList<>();
+                new LinkedList<>(key.pollEvents()).descendingIterator().forEachRemaining(events::add);
+                List<WatchEventKeyTuple> ev = events.stream().map(event -> new WatchEventKeyTuple(key, ((WatchEvent<Path>) event)))
+                        .collect(Collectors.toList());
+                Observable.fromIterable(ev).subscribe(event -> update(event).forEach(
+                        ev1 -> publisher.onNext(ev1)));
+
+
+                /*Observable.just(watchService.take())
+                        .buffer(100, TimeUnit.MILLISECONDS)
+                        .flatMap(Observable::fromIterable)
+                        .flatMap(key -> Observable.fromIterable(key.pollEvents())
+                                .map(value -> new WatchEventKeyTuple(key, ((WatchEvent<Path>) value))))
+                        .subscribe(event -> update(event).forEach(ev -> publisher.onNext(ev)));*/
             } catch (InterruptedException e) {
                 log.warn("Exception while processing events: ", e);
             }
@@ -50,46 +67,35 @@ public class FileWatcher implements Runnable {
         }
     }
 
-    private List<Event> update(WatchKey key) {
-        Queue<WatchEvent<?>> watchEvents = new LinkedList<>(key.pollEvents());
+    private Stream<Event> update(WatchEventKeyTuple tuple) {
         List<Event> events = new ArrayList<>();
-        while (!watchEvents.isEmpty()) {
-            WatchEvent<?> event = watchEvents.poll();
-            String fileName = ((WatchEvent<Path>) event).context().getFileName().toString();
-            if (fileName.contains(".tmp")) {
-                log.debug("Found temporary file: " + fileName + ". Ignoring.");
-                continue;
-            }
-            Path path = watchKeys.get(key).resolve(fileName);
+        Path path = watchKeys.get(tuple.getKey()).resolve(tuple.getEvent().context().getFileName());
 
-            if (event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
-                if (!Files.exists(path) || !Files.exists(path.getParent())) {
-                    watchEvents.add(event);
-                } else {
-                    addToWatched(path);
-                    addToParentDirectory(path);
-                    events.add(new Event(path, EventType.CREATE));
-                }
-            }
-            if (event.kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
-                events.add(new Event(path, EventType.DELETE));
-                events.addAll(removeBranchFromTree(path)
-                        .map(element -> new Event(element, EventType.DELETE))
-                        .collect(Collectors.toList()));
-            }
+        if (tuple.getEvent().kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
+            addToWatched(path);
+            addBranchToTree(path);
+            log.info(tuple.toString());
+            events.add(new Event(path, EventType.CREATE));
         }
-        if (!key.reset()) {
-            watchKeys.remove(key);
+        if (tuple.getEvent().kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
+            events.add(new Event(path, EventType.DELETE));
+            events.addAll(removeBranchFromTree(path)
+                    .map(element -> new Event(element, EventType.DELETE))
+                    .collect(Collectors.toList()));
         }
-        return events;
+
+        if (!tuple.getKey().reset()) {
+            watchKeys.remove(tuple.getKey());
+        }
+        return events.stream();
     }
 
-    private void addToParentDirectory(Path path) {
+    private void addBranchToTree(Path path) {
         Optional<Node<Path>> parent = tree.asStream().filter(node -> node.getPayload().equals(path.getParent())).findFirst();
         if (parent.isPresent()) {
-            parent.get().addChild(NodeUtils.createNodeTree(path));
+            parent.get().addChild(NodePathUtils.createNodeTree(path));
         } else if (tree.getRoot().getPayload().equals(path.getParent())) {
-            tree.getRoot().addChild(NodeUtils.createNodeTree(path));
+            tree.getRoot().addChild(NodePathUtils.createNodeTree(path));
         }
     }
 
@@ -110,11 +116,19 @@ public class FileWatcher implements Runnable {
 
     private void registerToWatcher(Path dir) {
         try {
-            WatchKey key = dir.register(watchService, new WatchEvent.Kind[]{StandardWatchEventKinds.ENTRY_CREATE,
-                    StandardWatchEventKinds.ENTRY_DELETE}, SensitivityWatchEventModifier.HIGH);
+            WatchKey key = dir.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
+                    StandardWatchEventKinds.ENTRY_DELETE);
             watchKeys.put(key, dir);
         } catch (IOException e) {
             log.warn("Couldn't register directory: " + dir + " to file watcher");
         }
+    }
+
+    @Data
+    @ToString
+    @AllArgsConstructor
+    private class WatchEventKeyTuple {
+        private WatchKey key;
+        private WatchEvent<Path> event;
     }
 }

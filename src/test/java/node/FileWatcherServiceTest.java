@@ -4,34 +4,64 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import io.reactivex.Observable;
 import io.reactivex.observers.TestObserver;
-import io.reactivex.subjects.PublishSubject;
+import io.reactivex.subjects.ReplaySubject;
+import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import node.model.Event;
 import node.model.EventType;
 import node.service.FileWatcherService;
-import node.utils.FileWatcher;
-import org.junit.After;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
 public class FileWatcherServiceTest {
 
-    private FileSystem fs;
+    @Test
+    public void addNewPathsToWatchedDirectory_returnCreateEvents() throws IOException {
+        List<Event> expected = new ArrayList<>();
+        @Cleanup val fs = Jimfs.newFileSystem(Configuration.windows());
 
-    @After
-    public void cleanUp() throws IOException {
-        if (fs != null) fs.close();
+        val catcher = ReplaySubject.<Event>create();
+
+        FileWatcherService fileWatcher = new FileWatcherService();
+        fileWatcher.startWatching(Files.createDirectory(fs.getPath("root"))).subscribe(catcher);
+
+        expected.add(new Event(Files.createDirectory(fs.getPath("root/folder1")), EventType.CREATE));
+        expected.add(new Event(Files.createDirectory(fs.getPath("root/folder2")), EventType.CREATE));
+        expected.add(new Event(Files.createDirectory(fs.getPath("root/folder1/subfolder")), EventType.CREATE));
+        val actual = StreamSupport.stream(catcher.blockingIterable().spliterator(), false).limit(5).collect(Collectors.toList());
+
+        assertThat(actual).containsAll(expected);
+    }
+
+    @Test
+    public void deleteFilesInWatchedDirectory_returnDeleteEvents() throws IOException {
+        List<Event> expected = new ArrayList<>();
+        @Cleanup val fs = Jimfs.newFileSystem(Configuration.windows());
+        Path root = Files.createDirectory(fs.getPath("root"));
+        Files.createDirectory(fs.getPath("root/folder1"));
+
+        FileWatcherService fileWatcher = new FileWatcherService();
+        val catcher = ReplaySubject.<Event>create();
+        fileWatcher.startWatching(root).subscribe(catcher);
+
+        expected.add(new Event(fs.getPath("root/folder1"), EventType.DELETE));
+
+        Files.delete(fs.getPath("root/folder1"));
+        val actual = StreamSupport.stream(catcher.blockingIterable().spliterator(), false).limit(1).collect(Collectors.toList());
+
+        assertThat(actual).containsAll(expected);
     }
 
     @Test
@@ -48,7 +78,7 @@ public class FileWatcherServiceTest {
 
     @Test
     public void addingTwoPathsToFileWatcher_returnSameObservable() throws IOException {
-        fs = Jimfs.newFileSystem(Configuration.windows());
+        @Cleanup val fs = Jimfs.newFileSystem(Configuration.windows());
 
         Path path1 = Files.createDirectory(fs.getPath("path1"));
         Path path2 = Files.createDirectory(fs.getPath("path2"));
@@ -57,59 +87,5 @@ public class FileWatcherServiceTest {
         Observable<Event> observable1 = fileWatcher.startWatching(path1);
         Observable<Event> observable2 = fileWatcher.startWatching(path2);
         assertThat(observable1).isSameAs(observable2);
-    }
-
-    @Test
-    public void addNewPathsToWatchedDirectory_returnCreateEvents() throws IOException, InterruptedException {
-        List<Event> expectedEvents = new ArrayList<>();
-        List<Event> actualEvents = new ArrayList<>();
-        fs = Jimfs.newFileSystem(Configuration.windows());
-
-        FileWatcherService fileWatcher = new FileWatcherService();
-        fileWatcher.startWatching(Files.createDirectory(fs.getPath("root"))).subscribe(actualEvents::add);
-
-        expectedEvents.add(new Event(Files.createDirectory(fs.getPath("root/folder1")), EventType.CREATE));
-        expectedEvents.add(new Event(Files.createDirectory(fs.getPath("root/folder2")), EventType.CREATE));
-
-        Thread.sleep(7000); // wait for fileWatcher to notice changes
-
-        assertThat(actualEvents).containsAll(expectedEvents);
-    }
-
-    @Test
-    public void deleteFilesInWatchedDirectory_returnDeleteEvents() throws IOException, InterruptedException {
-        List<Event> expectedEvents = new ArrayList<>();
-        List<Event> actualEvents = new ArrayList<>();
-        fs = Jimfs.newFileSystem(Configuration.windows());
-        Path root = Files.createDirectory(fs.getPath("root"));
-        Files.createDirectory(fs.getPath("root/folder1"));
-
-        FileWatcherService fileWatcher = new FileWatcherService();
-        fileWatcher.startWatching(root).subscribe(actualEvents::add);
-
-        expectedEvents.add(new Event(fs.getPath("root/folder1"), EventType.DELETE));
-
-        Files.delete(fs.getPath("root/folder1"));
-        Thread.sleep(7000); // wait for fileWatcher to notice changes
-
-        assertThat(actualEvents).containsAll(expectedEvents);
-    }
-
-    @Test
-    public void givenTmpFile_whenCreate_thenIgnore() throws IOException, InterruptedException {
-        List<Event> actualEvents = new ArrayList<>();
-        fs = Jimfs.newFileSystem(Configuration.windows());
-        Path root = Files.createDirectory(fs.getPath("root"));
-
-        FileWatcherService fileWatcher = new FileWatcherService();
-        fileWatcher.startWatching(root).subscribe(actualEvents::add);
-
-        Files.createFile(fs.getPath("root/file.txt"));
-        Files.createFile(fs.getPath("root/temp.tmp"));
-        Event expectedEvent = new Event(fs.getPath("root/file.txt"), EventType.CREATE);
-
-        Thread.sleep(7000); // wait for fileWatcher to notice changes
-        assertThat(actualEvents).hasSize(1);
-        assertThat(actualEvents).contains(expectedEvent);
     }
 }

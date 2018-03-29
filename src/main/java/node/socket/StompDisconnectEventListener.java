@@ -17,4 +17,5 @@ public class StompDisconnectEventListener implements ApplicationListener<Session
     public void onApplicationEvent(SessionDisconnectEvent event) {
         publishSubject.onNext(event.getSessionId());
     }
+
 }

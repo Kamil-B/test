@@ -23,5 +23,4 @@ public class PathUtilsTest {
     public void givenFile_whenGetSubdirectories_returnEmptyList(){
        assertThat(PathUtils.getSubdirectories(Paths.get("/path/does/not/exist"))).isEqualTo(new ArrayList<>());
     }
-
 }

@@ -72,8 +72,8 @@ public class TopicControllerTest {
         EventMessage expectedMessage = new EventMessage("src\\test\\resources\\test.txt", EventType.CREATE);
         WebSocketStompClient stompClient = new WebSocketStompClient(new SockJsClient(createTransportClient()));
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
-        WebSocketClient client = new StandardWebSocketClient();
-        client.doHandshake(new TextWebSocketHandler(), WEBSOCKET_URI);
+        //WebSocketClient client = new StandardWebSocketClient();
+        //client.doHandshake(new TextWebSocketHandler(), WEBSOCKET_URI);
 
         StompSession stompSession = stompClient.connect(WEBSOCKET_URI, new StompSessionHandlerAdapter() {
         }).get(5, SECONDS);

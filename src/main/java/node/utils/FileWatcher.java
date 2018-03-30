@@ -13,6 +13,7 @@ import node.model.Node;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,8 +35,9 @@ public class FileWatcher implements Runnable {
 
     @Override
     public void run() {
-        while (true) {
+        while (!watchKeys.isEmpty()) {
             try {
+/*
                 WatchKey key = watchService.take();
                 List<WatchEvent<?>> events = new LinkedList<>();
                 new LinkedList<>(key.pollEvents()).descendingIterator().forEachRemaining(events::add);
@@ -43,14 +45,18 @@ public class FileWatcher implements Runnable {
                         .collect(Collectors.toList());
                 Observable.fromIterable(ev).subscribe(event -> update(event).forEach(
                         ev1 -> publisher.onNext(ev1)));
-
-
-                /*Observable.just(watchService.take())
+*/
+                Observable.just(watchService.take())
                         .buffer(100, TimeUnit.MILLISECONDS)
                         .flatMap(Observable::fromIterable)
                         .flatMap(key -> Observable.fromIterable(key.pollEvents())
-                                .map(value -> new WatchEventKeyTuple(key, ((WatchEvent<Path>) value))))
-                        .subscribe(event -> update(event).forEach(ev -> publisher.onNext(ev)));*/
+                                .map(value ->
+                                {
+                                    log.info("value: " + value.toString());
+                                    return new WatchEventKeyTuple(key, ((WatchEvent<Path>) value));
+                                }))
+                        .subscribe(event -> update(event).forEach(ev -> publisher.onNext(ev)));
+
             } catch (InterruptedException e) {
                 log.warn("Exception while processing events: ", e);
             }
@@ -67,25 +73,25 @@ public class FileWatcher implements Runnable {
         }
     }
 
-    private Stream<Event> update(WatchEventKeyTuple tuple) {
+    private Stream<Event> update(WatchEventKeyTuple event) {
         List<Event> events = new ArrayList<>();
-        Path path = watchKeys.get(tuple.getKey()).resolve(tuple.getEvent().context().getFileName());
+        Path path = watchKeys.get(event.getKey()).resolve(event.getEvent().context().getFileName());
+        log.info("path: " + path);
 
-        if (tuple.getEvent().kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
+        if (event.getEvent().kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
             addToWatched(path);
             addBranchToTree(path);
-            log.info(tuple.toString());
+            log.info(event.toString());
             events.add(new Event(path, EventType.CREATE));
         }
-        if (tuple.getEvent().kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
+        if (event.getEvent().kind().equals(StandardWatchEventKinds.ENTRY_DELETE)) {
             events.add(new Event(path, EventType.DELETE));
             events.addAll(removeBranchFromTree(path)
                     .map(element -> new Event(element, EventType.DELETE))
                     .collect(Collectors.toList()));
         }
-
-        if (!tuple.getKey().reset()) {
-            watchKeys.remove(tuple.getKey());
+        if (!event.getKey().reset()) {
+            watchKeys.remove(event.getKey());
         }
         return events.stream();
     }

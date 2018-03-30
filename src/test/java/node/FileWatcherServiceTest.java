@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class FileWatcherServiceTest {
 
     @Test
-    public void addNewPathsToWatchedDirectory_returnCreateEvents() throws IOException {
+    public void addNewPathsToWatchedDirectory_returnCreateEvents() throws IOException, InterruptedException {
         List<Event> expected = new ArrayList<>();
         @Cleanup val fs = Jimfs.newFileSystem(Configuration.windows());
 
@@ -40,7 +40,8 @@ public class FileWatcherServiceTest {
         expected.add(new Event(Files.createDirectory(fs.getPath("root/folder1")), EventType.CREATE));
         expected.add(new Event(Files.createDirectory(fs.getPath("root/folder2")), EventType.CREATE));
         expected.add(new Event(Files.createDirectory(fs.getPath("root/folder1/subfolder")), EventType.CREATE));
-        val actual = StreamSupport.stream(catcher.blockingIterable().spliterator(), false).limit(5).collect(Collectors.toList());
+
+        val actual = StreamSupport.stream(catcher.blockingIterable().spliterator(), false).limit(6).collect(Collectors.toList());
 
         assertThat(actual).containsAll(expected);
     }
